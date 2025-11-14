@@ -1,11 +1,9 @@
-# --- Început Fișier Nou și Corect ---
+# --- Început Fișier Nou și Corect FINAL ---
 platform :ios, '13.0'
 
-# Adaugă calea către uneltele Flutter
-flutter_application_path = File.expand_path(File.join('..', '..'))
-if (File.exist?(File.join(flutter_application_path, '.flutter-plugins-dependencies')))
-  Kernel.require File.join(flutter_application_path, '.flutter-plugins-dependencies')
-end
+# --- LINIA MAGICĂ (Calea corectă) ---
+# Îi spunem lui Ruby unde să găsească uneltele Flutter
+require_relative File.join('Flutter', 'podhelper')
 
 ENV['LANG'] = 'en_US.UTF-8'
 
