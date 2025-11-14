@@ -1,12 +1,23 @@
 # --- Început Fișier Nou ---
 platform :ios, '13.0'
-
 ENV['LANG'] = 'en_US.UTF-8'
+
+# --- LINIILE MAGICE (PENTRU A REPARA BUILD-UL) ---
+# Îi spunem lui Ruby unde să găsească uneltele Flutter
+require_relative File.join('..', 'packages', 'flutter_tools', 'bin', 'podhelper')
+# --- SFÂRȘIT LINII MAGICE ---
 
 target 'Runner' do
   use_frameworks!
   use_modular_headers!
 
+  # Acum comanda va fi recunoscută
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
+end
+
+post_install do |installer|
+  installer.pods_project.targets.each do |target|
+    flutter_additional_ios_build_settings(target)
+  end
 end
 # --- Sfârșit Fișier Nou ---
