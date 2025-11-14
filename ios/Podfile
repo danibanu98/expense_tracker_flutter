@@ -1,5 +1,11 @@
-# --- Început Fișier Nou ---
+# --- Început Fișier Nou și Corect ---
 platform :ios, '13.0'
+
+# Adaugă calea către uneltele Flutter
+flutter_application_path = File.expand_path(File.join('..', '..'))
+if (File.exist?(File.join(flutter_application_path, '.flutter-plugins-dependencies')))
+  Kernel.require File.join(flutter_application_path, '.flutter-plugins-dependencies')
+end
 
 ENV['LANG'] = 'en_US.UTF-8'
 
@@ -7,6 +13,13 @@ target 'Runner' do
   use_frameworks!
   use_modular_headers!
 
+  # Acum comanda va fi recunoscută
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
+end
+
+post_install do |installer|
+  installer.pods_project.targets.each do |target|
+    flutter_additional_ios_build_settings(target)
+  end
 end
 # --- Sfârșit Fișier Nou ---
