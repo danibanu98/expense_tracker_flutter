@@ -16,11 +16,15 @@ class StatisticsPage extends StatefulWidget {
 class _StatisticsPageState extends State<StatisticsPage> {
   final FirestoreService _firestoreService = FirestoreService();
   DateTime _currentDisplayDate = DateTime.now();
+
+  // --- AICI FOLOSIM LOGICA CORECTĂ ---
   int _selectedPeriodIndex = 2; // 0=Ziua, 1=Săpt, 2=Luna, 3=Anul
   final List<String> _periods = ['Ziua', 'Săpt', 'Luna', 'Anul'];
-  String _selectedType = 'expense'; // 'expense' sau 'income'
+  String _selectedType = 'expense';
+  // --- SFÂRȘIT LOGICĂ ---
 
-  // Funcția de filtrare a tranzacțiilor (e corectă)
+  // --- Începutul funcțiilor helper (LIPSEAU LA TINE) ---
+
   List<QueryDocumentSnapshot> _filterTransactionsByPeriod(
     List<QueryDocumentSnapshot> allTransactions,
     int periodIndex,
@@ -61,7 +65,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
     }).toList();
   }
 
-  // Funcția de procesare a datelor pentru grafic (e corectă)
   Map<int, double> _calculateChartTotals(
     List<QueryDocumentSnapshot> transactions,
     int periodIndex,
@@ -85,12 +88,28 @@ class _StatisticsPageState extends State<StatisticsPage> {
     }
     return totals;
   }
+  // --- Sfârșitul funcțiilor helper ---
 
   @override
   Widget build(BuildContext context) {
     final settings = Provider.of<SettingsProvider>(context);
+
     return Scaffold(
-      appBar: AppBar(title: Text('Statistici')),
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(80.0),
+        child: AppBar(
+          centerTitle: true,
+          title: const Padding(
+            padding: EdgeInsets.only(top: 20.0),
+            child: Text(
+              'Statistici',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
+          ),
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          elevation: 0,
+        ),
+      ),
       body: StreamBuilder<QuerySnapshot>(
         stream: _firestoreService.getExpensesStream(),
         builder: (context, snapshot) {
@@ -101,12 +120,12 @@ class _StatisticsPageState extends State<StatisticsPage> {
             return Center(child: Text('A apărut o eroare: ${snapshot.error}'));
           }
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return Center(child: Text('Nici o tranzacție de analizat'));
+            return Center(child: Text('Nicio tranzacție de analizat.'));
           }
 
           var allTransactions = snapshot.data!.docs;
 
-          // --- LOGICA DE FILTRARE ---
+          // --- LOGICA (rămâne neschimbată) ---
           var periodFilteredTransactions = _filterTransactionsByPeriod(
             allTransactions,
             _selectedPeriodIndex,
@@ -127,9 +146,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
                 (b.data() as Map<String, dynamic>)['amount'] ?? 0.0;
             return amountB.compareTo(amountA);
           });
-
-          // --- LOGICA PENTRU GRAFIC (O SINGURĂ DATĂ) ---
-          // **FIX:** Am șters blocul duplicat de la tine
           Map<int, double> chartTotals = _calculateChartTotals(
             typeFilteredTransactions,
             _selectedPeriodIndex,
@@ -138,7 +154,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
             return FlSpot(entry.key.toDouble(), entry.value);
           }).toList();
           spots.sort((a, b) => a.x.compareTo(b.x));
-
           double maxY = 0;
           if (spots.isNotEmpty) {
             maxY =
@@ -146,7 +161,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                 1.2;
           }
           if (maxY == 0) maxY = 10;
-          // --- SFÂRȘIT LOGICĂ GRAFIC ---
+          // --- SFÂRȘIT LOGICĂ ---
 
           return SingleChildScrollView(
             child: Padding(
@@ -154,96 +169,74 @@ class _StatisticsPageState extends State<StatisticsPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // --- FILTRELE DE PERIOADĂ ---
-                  ToggleButtons(
-                    isSelected: List.generate(
-                      4,
-                      (index) => index == _selectedPeriodIndex,
-                    ),
-                    onPressed: (index) {
-                      setState(() {
-                        _selectedPeriodIndex = index;
-                      });
-                    },
-                    borderRadius: BorderRadius.circular(10),
-                    selectedColor: Colors.white,
-                    fillColor: Theme.of(context).colorScheme.primary,
-                    children: _periods
-                        .map(
-                          (period) => Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16.0,
-                            ),
-                            child: Text(period),
-                          ),
-                        )
-                        .toList(),
+                  // --- SELECTOR DE PERIOADĂ STILIZAT ---
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: List.generate(4, (index) {
+                      // Construiește fiecare buton individual
+                      return _buildPeriodButton(
+                        text: _periods[index],
+                        index: index,
+                      );
+                    }),
                   ),
+
+                  // --- AM ȘTERS SELECTORUL DE DATĂ (< 2025 >) ---
                   SizedBox(height: 16),
 
-                  // --- SELECTORUL DE PERIOADĂ ---
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      IconButton(
-                        icon: Icon(Icons.chevron_left),
-                        onPressed: _previousPeriod,
+                  // --- FILTRUL (Cheltuieli / Venituri) STILIZAT ---
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12.0,
+                        vertical: 4.0,
                       ),
-                      Text(
-                        _formatPeriodText(),
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).cardColor,
+                        borderRadius: BorderRadius.circular(12.0),
+                        border: Border.all(
+                          color: Theme.of(
+                            context,
+                          ).dividerColor.withOpacity(0.5),
                         ),
                       ),
-                      IconButton(
-                        icon: Icon(Icons.chevron_right),
-                        onPressed: _nextPeriod,
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: 16),
-
-                  // --- FILTRUL (Cheltuieli / Venituri) ---
-                  DropdownButtonFormField<String>(
-                    initialValue: _selectedType,
-                    items: [
-                      DropdownMenuItem(
-                        value: 'expense',
-                        child: Text('Cheltuieli'),
-                      ),
-                      DropdownMenuItem(
-                        value: 'income',
-                        child: Text('Venituri'),
-                      ),
-                    ],
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedType = value!;
-                      });
-                    },
-                    decoration: InputDecoration(
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: _selectedType,
+                          icon: Icon(
+                            Icons.keyboard_arrow_down,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                          style: Theme.of(context).textTheme.bodyMedium,
+                          items: [
+                            DropdownMenuItem(
+                              value: 'expense',
+                              child: Text('Cheltuieli'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'income',
+                              child: Text('Venituri'),
+                            ),
+                          ],
+                          onChanged: (String? newValue) {
+                            setState(() {
+                              _selectedType = newValue!;
+                            });
+                          },
+                        ),
                       ),
                     ),
                   ),
-                  SizedBox(height: 30),
+
+                  SizedBox(height: 20),
 
                   // --- GRAFICUL LINIAR ---
-                  Text(
-                    _selectedType == 'expense'
-                        ? 'Sumar Cheltuieli'
-                        : 'Sumar Venituri',
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                  ),
-                  SizedBox(height: 20),
                   SizedBox(
                     height: 250,
-                    // **FIX:** Am folosit 'spots' în loc de 'chartSpots'
                     child: _buildLineChart(spots, maxY, _selectedPeriodIndex),
                   ),
-                  SizedBox(height: 30),
+                  SizedBox(height: 50),
 
                   // --- LISTA "TOP" ---
                   Text(
@@ -254,6 +247,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                   ),
                   SizedBox(height: 10),
 
+                  // ListView.builder
                   if (typeFilteredTransactions.isEmpty)
                     Center(
                       child: Padding(
@@ -282,7 +276,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                               _getIconForCategory(data['category'] ?? 'Altul'),
                               color: _selectedType == 'expense'
                                   ? Colors.red[300]
-                                  : Colors.green[300],
+                                  : const Color(0xff2f7e79),
                             ),
                             title: Text(
                               data['description'] ?? 'N/A',
@@ -292,12 +286,11 @@ class _StatisticsPageState extends State<StatisticsPage> {
                               data['category'] ?? 'Fără categorie',
                             ),
                             trailing: Text(
-                              // **FIX:** Am scos '${netBalance.toStringAsFixed(2)}'
                               '${_selectedType == 'expense' ? '-' : '+'}${settings.currencySymbol}${(data['amount'] ?? 0.0).toStringAsFixed(2)}',
                               style: TextStyle(
                                 color: _selectedType == 'expense'
                                     ? Colors.red[400]
-                                    : Colors.green[400],
+                                    : const Color(0xff2f7e79),
                                 fontWeight: FontWeight.bold,
                                 fontSize: 16,
                               ),
@@ -315,7 +308,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
     );
   }
 
-  // --- FUNCȚIILE HELPER (Toate sunt corecte, le lași așa cum sunt) ---
+  // --- FUNCȚIILE HELPER (Acum sunt la locul lor) ---
 
   IconData _getIconForCategory(String category) {
     switch (category) {
@@ -340,11 +333,50 @@ class _StatisticsPageState extends State<StatisticsPage> {
     }
   }
 
+  // --- FUNCȚIE NOUĂ PENTRU BUTOANELE DE PERIOADĂ STILIZATE ---
+  Widget _buildPeriodButton({required String text, required int index}) {
+    // Verifică dacă acest buton este cel selectat
+    bool isSelected = _selectedPeriodIndex == index;
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedPeriodIndex = index;
+          _currentDisplayDate = DateTime.now(); // Resetează data la "acum"
+        });
+      },
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        decoration: BoxDecoration(
+          // --- AICI E MAGIA ---
+          // Doar cel activ are fundal verde și colțuri rotunjite
+          color: isSelected
+              ? Theme.of(context)
+                    .colorScheme
+                    .primary // Verde (Activ)
+              : Colors.transparent, // Transparent (Inactiv)
+          borderRadius: BorderRadius.circular(10.0),
+        ),
+        child: Text(
+          text,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            // Schimbă culoarea textului
+            color: isSelected
+                ? Colors
+                      .white // Alb (Activ)
+                : Colors.grey[600], // Gri (Inactiv)
+            fontSize: 16,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildLineChart(List<FlSpot> spots, double maxY, int periodIndex) {
     if (spots.isEmpty) {
       return Center(child: Text('Date insuficiente pentru grafic.'));
     }
-
     double minX, maxX;
     switch (periodIndex) {
       case 0:
@@ -359,7 +391,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
         minX = 1;
         maxX = 12;
     }
-
     return LineChart(
       LineChartData(
         gridData: FlGridData(show: false),
@@ -415,7 +446,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
       fontSize: 12,
     );
     String text;
-
     switch (periodIndex) {
       case 0:
         text = value.toInt() % 6 == 0 ? '${value.toInt()}h' : '';
@@ -496,58 +526,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
     );
   }
 
-  void _previousPeriod() {
-    setState(() {
-      if (_selectedPeriodIndex == 0) {
-        _currentDisplayDate = _currentDisplayDate.subtract(Duration(days: 1));
-      } else if (_selectedPeriodIndex == 1) {
-        _currentDisplayDate = _currentDisplayDate.subtract(Duration(days: 7));
-      } else if (_selectedPeriodIndex == 2) {
-        _currentDisplayDate = DateTime(
-          _currentDisplayDate.year,
-          _currentDisplayDate.month - 1,
-          1,
-        );
-      } else {
-        _currentDisplayDate = DateTime(_currentDisplayDate.year - 1, 1, 1);
-      }
-    });
-  }
-
-  void _nextPeriod() {
-    setState(() {
-      if (_selectedPeriodIndex == 0) {
-        _currentDisplayDate = _currentDisplayDate.add(Duration(days: 1));
-      } else if (_selectedPeriodIndex == 1) {
-        _currentDisplayDate = _currentDisplayDate.add(Duration(days: 7));
-      } else if (_selectedPeriodIndex == 2) {
-        _currentDisplayDate = DateTime(
-          _currentDisplayDate.year,
-          _currentDisplayDate.month + 1,
-          1,
-        );
-      } else {
-        _currentDisplayDate = DateTime(_currentDisplayDate.year + 1, 1, 1);
-      }
-    });
-  }
-
-  String _formatPeriodText() {
-    switch (_selectedPeriodIndex) {
-      case 0:
-        return DateFormat('d MMM yyyy').format(_currentDisplayDate);
-      case 1:
-        DateTime startOfWeek = _currentDisplayDate.subtract(
-          Duration(days: _currentDisplayDate.weekday - 1),
-        );
-        DateTime endOfWeek = startOfWeek.add(Duration(days: 6));
-        return '${DateFormat('d MMM').format(startOfWeek)} - ${DateFormat('d MMM yyyy').format(endOfWeek)}';
-      case 2:
-        return DateFormat('MMMM yyyy', 'ro').format(_currentDisplayDate);
-      case 3:
-        return DateFormat('yyyy').format(_currentDisplayDate);
-      default:
-        return '';
-    }
-  }
+  // --- AM ȘTERS _previousPeriod, _nextPeriod, _formatPeriodText ---
+  // Deoarece ai cerut să eliminăm filtrul de perioadă
 }

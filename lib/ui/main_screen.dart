@@ -4,16 +4,18 @@ import 'package:expense_tracker_nou/ui/profile_page.dart';
 import 'package:expense_tracker_nou/ui/statistics_page.dart';
 import 'package:expense_tracker_nou/ui/wallet_page.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class MainScreen extends StatefulWidget {
-  const MainScreen({super.key});
+  final int lastTabIndex;
+  const MainScreen({super.key, required this.lastTabIndex});
 
   @override
   State<MainScreen> createState() => _MainScreenState();
 }
 
 class _MainScreenState extends State<MainScreen> {
-  int _selectedIndex = 0;
+  late int _selectedIndex; // O vom inițializa imediat
 
   // Definim lista goală
   late final List<Widget> _widgetOptions;
@@ -27,6 +29,7 @@ class _MainScreenState extends State<MainScreen> {
   void initState() {
     super.initState();
     // Inițializăm lista de widget-uri AICI
+    _selectedIndex = widget.lastTabIndex;
     _widgetOptions = <Widget>[
       HomePage(
         onSeeAllPressed: () => _navigateTo(1),
@@ -37,10 +40,15 @@ class _MainScreenState extends State<MainScreen> {
     ];
   }
 
-  void _onItemTapped(int index) {
+  void _onItemTapped(int index) async {
+    // <-- Am făcut-o 'async'
     setState(() {
       _selectedIndex = index;
     });
+
+    // --- LINIE NOUĂ: Salvăm indexul ---
+    final prefs = await SharedPreferences.getInstance();
+    prefs.setInt('lastTabIndex', index);
   }
 
   // --- FUNCȚIE NOUĂ PENTRU BUTONUL + ---
@@ -55,44 +63,53 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      // Afișează ecranul selectat
-      // Afișează ecranul selectat, dar le păstrează pe celelalte "vii"
-      body: IndexedStack(index: _selectedIndex, children: _widgetOptions),
+    // Verificăm dacă suntem pe o pagină care trebuie să arate butonul +
+    // 0 = Acasă, 2 = Portofel
+    bool showFab = (_selectedIndex == 0 || _selectedIndex == 2);
 
-      // --- BUTONUL + MUTAT AICI ȘI MĂRIT ---
-      floatingActionButton: SizedBox(
-        width: 64.0, // Mărimea nouă (implicit e 56.0)
-        height: 64.0, // Mărimea nouă
-        child: FloatingActionButton(
-          onPressed: _showAddTransactionSheet,
-          child: Icon(
-            Icons.add,
-            color: Colors.white,
-            size: 32.0,
-          ), // Am mărit și iconița
-          // Culoarea și forma sunt preluate din temă
-        ),
+    return Scaffold(
+      body: IndexedStack(
+        // Folosim IndexedStack-ul nostru
+        index: _selectedIndex,
+        children: _widgetOptions,
       ),
-      floatingActionButtonLocation:
-          FloatingActionButtonLocation.centerDocked, // Îl punem în centru
-      // --- MENIUL DE JOS MODIFICAT ---
+
+      // --- MODIFICARE 1: Afișează butonul doar pe anumite pagini ---
+      floatingActionButton:
+          showFab // Am folosit variabila de mai sus
+          ? SizedBox(
+              width: 64.0,
+              height: 64.0,
+              child: FloatingActionButton(
+                onPressed: _showAddTransactionSheet,
+                child: Icon(Icons.add, color: Colors.white, size: 32.0),
+              ),
+            )
+          : null, // NU arăta butonul pe paginile Statistici sau Profil
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+
+      // --- MODIFICARE 2: Meniul de jos se adaptează ---
       bottomNavigationBar: BottomAppBar(
-        shape: CircularNotchedRectangle(), // Creează "gaura" pentru buton
-        notchMargin: 8.0, // Spațiul din jurul butonului
+        shape: showFab
+            ? CircularNotchedRectangle()
+            : null, // Are "gaură" doar dacă butonul e vizibil
+        notchMargin: 8.0,
 
         child: Row(
-          // Am împărțit item-urile în două perechi, cu spațiu la mijloc
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          // Aici e logica de spațiere
+          mainAxisAlignment: showFab
+              ? MainAxisAlignment
+                    .spaceAround // Spațiere cu "gaură"
+              : MainAxisAlignment.spaceEvenly, // Spațiere EGALĂ
           children: <Widget>[
-            // --- Stânga ---
+            // Stânga
             _buildNavItem(icon: Icons.home, index: 0, label: 'Acasă'),
             _buildNavItem(icon: Icons.bar_chart, index: 1, label: 'Statistici'),
 
-            // Spațiul gol pentru butonul +
-            SizedBox(width: 40),
+            // Spațiul gol pentru butonul + (doar dacă e vizibil)
+            if (showFab) SizedBox(width: 40),
 
-            // --- Dreapta ---
+            // Dreapta
             _buildNavItem(icon: Icons.wallet, index: 2, label: 'Portofel'),
             _buildNavItem(icon: Icons.person, index: 3, label: 'Profil'),
           ],

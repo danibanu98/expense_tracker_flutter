@@ -1,58 +1,57 @@
 import 'package:flutter/material.dart';
-import 'package:intl/date_symbol_data_local.dart';
-import 'package:expense_tracker_nou/theme/theme.dart';
-import 'package:provider/provider.dart';
-import 'package:expense_tracker_nou/providers/settings_provider.dart';
-
-// 1. Importă pachetele pe care le-am instalat
 import 'package:firebase_core/firebase_core.dart';
-import 'firebase_options.dart'; // Fișierul generat de flutterfire
+import 'package:intl/date_symbol_data_local.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // Import nou
 
-// Aici vom adăuga ecranele noastre (Login, Home etc.)
+import 'firebase_options.dart';
+import 'package:expense_tracker_nou/providers/settings_provider.dart'; // Import nou
+import 'package:expense_tracker_nou/theme/theme.dart';
 import 'package:expense_tracker_nou/ui/auth_page.dart';
 
+// --- FUNCȚIA MAIN MODIFICATĂ ---
 void main() async {
-  // 2. Asigură-te că uneltele Flutter sunt gata
+  // 1. Asigură inițializarea
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('ro', null);
-
-  // 3. Inițializează Firebase folosind fișierul de opțiuni
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // 4. Pornește aplicația
+  // 2. Încarcă setările și ultima filă ÎNAINTE de a porni
+  final settingsProvider = SettingsProvider();
+  await settingsProvider.init(); // Încarcă tema și moneda
+
+  final prefs = await SharedPreferences.getInstance();
+  final int lastTabIndex = prefs.getInt('lastTabIndex') ?? 0; // 0 = Acasă
+
+  // 3. Pornește aplicația și "injectează" setările
   runApp(
-    ChangeNotifierProvider(
-      create: (context) => SettingsProvider(),
-      child: const MyApp(),
+    ChangeNotifierProvider.value(
+      value: settingsProvider, // Trimitem provider-ul deja inițializat
+      child: MyApp(lastTabIndex: lastTabIndex), // Trimitem ultima filă
     ),
   );
 }
 
+// --- CLASA MyApp MODIFICATĂ ---
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  // Acceptă ultima filă ca parametru
+  final int lastTabIndex;
+  const MyApp({super.key, required this.lastTabIndex});
 
   @override
   Widget build(BuildContext context) {
-    // --- AM MODIFICAT AICI ---
-    // Ascultă schimbările din SettingsProvider
+    // Ascultă provider-ul pentru temă
     return Consumer<SettingsProvider>(
       builder: (context, settings, child) {
         return MaterialApp(
           title: 'Expense Tracker',
-
-          // Folosește tema selectată din provider
-          themeMode: settings.themeMode,
-
-          // Tema noastră întunecată (pe care am făcut-o)
-          darkTheme: darkTheme,
-
-          // TODO: Vom crea o temă luminoasă
-          theme: lightTheme, // O temă luminoasă de bază
-
-          home: AuthPage(),
+          themeMode: settings.themeMode, // Tema dinamică
+          theme: lightTheme, // Tema noastră luminoasă
+          darkTheme: darkTheme, // Tema noastră întunecată
+          // Trimite 'lastTabIndex' mai departe către AuthPage
+          home: AuthPage(lastTabIndex: lastTabIndex),
         );
       },
     );
-    // --- SFÂRȘIT MODIFICARE ---
   }
 }

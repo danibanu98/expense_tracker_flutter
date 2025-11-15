@@ -1,10 +1,11 @@
+import 'package:expense_tracker_nou/ui/main_screen.dart'; // Asigură-te că importul e corect
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:expense_tracker_nou/ui/login_page.dart';
-import 'package:expense_tracker_nou/ui/main_screen.dart';
 
 class AuthPage extends StatelessWidget {
-  const AuthPage({super.key});
+  final int lastTabIndex;
+  const AuthPage({super.key, required this.lastTabIndex});
 
   @override
   Widget build(BuildContext context) {
@@ -23,7 +24,7 @@ class AuthPage extends StatelessWidget {
           // (Firebase ne-a trimis un obiect 'User')
           if (snapshot.hasData) {
             // Trimite-l la ecranul principal CU MENIU
-            return MainScreen();
+            return MainScreen(lastTabIndex: lastTabIndex);
           }
           // 4. Utilizatorul NU este logat?
           // (Firebase ne-a trimis 'null')
