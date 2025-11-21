@@ -65,7 +65,7 @@ class _MainScreenState extends State<MainScreen> {
   Widget build(BuildContext context) {
     // Verificăm dacă suntem pe o pagină care trebuie să arate butonul +
     // 0 = Acasă, 2 = Portofel
-    bool showFab = (_selectedIndex == 0 || _selectedIndex == 2);
+    bool showFab = (_selectedIndex == 0);
 
     return Scaffold(
       body: IndexedStack(

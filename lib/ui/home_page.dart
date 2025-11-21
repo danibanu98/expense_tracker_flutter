@@ -4,7 +4,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:expense_tracker_nou/services/firestore_service.dart';
 import 'package:provider/provider.dart';
 import 'package:expense_tracker_nou/providers/settings_provider.dart';
-import 'package:expense_tracker_nou/theme/theme.dart'; // Importăm noul verde
+import 'package:expense_tracker_nou/theme/theme.dart';
+import 'package:expense_tracker_nou/ui/transaction_details_page.dart';
 
 class HomePage extends StatefulWidget {
   final VoidCallback onSeeAllPressed;
@@ -40,30 +41,24 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  // --- FUNCȚIE NOUĂ PENTRU A OBȚINE SALUTUL ---
   String _getGreeting() {
     final int currentHour = DateTime.now().hour;
-
     if (currentHour >= 5 && currentHour < 12) {
       return 'Bună dimineața,';
     } else if (currentHour >= 12 && currentHour < 18) {
       return 'Bună ziua,';
     } else {
-      // De la 18:00 seara până la 4:59 dimineața
       return 'Bună seara,';
     }
   }
 
-  // --- FUNCȚIE NOUĂ PENTRU A ALEGE LOGO SAU ICONIȚĂ ---
   Widget _buildTransactionLeading(Map<String, dynamic> data, bool isExpense) {
     String description = (data['description'] ?? '').toLowerCase();
     String category = data['category'] ?? 'Altul';
 
-    // 1. Verifică brand-urile specifice (pe baza descrierii)
-    // Adaugă oricâte vrei tu aici
     if (description.contains('netflix')) {
       return CircleAvatar(
-        backgroundColor: Colors.white, // Culoarea de fundal a logo-ului
+        backgroundColor: Colors.white,
         child: Image.asset('assets/images/netflix.png', width: 28, height: 28),
       );
     }
@@ -75,31 +70,31 @@ class _HomePageState extends State<HomePage> {
     }
     if (description.contains('digi')) {
       return CircleAvatar(
-        backgroundColor: Colors.white, // Un fundal deschis pentru Upwork
+        backgroundColor: Colors.white,
         child: Image.asset('assets/images/digi.png', width: 28, height: 28),
       );
     }
     if (description.contains('enel')) {
       return CircleAvatar(
-        backgroundColor: Colors.white, // Un fundal deschis pentru Upwork
+        backgroundColor: Colors.white,
         child: Image.asset('assets/images/enel.png', width: 28, height: 28),
       );
     }
     if (description.contains('eon')) {
       return CircleAvatar(
-        backgroundColor: Colors.white, // Un fundal deschis pentru Upwork
+        backgroundColor: Colors.white,
         child: Image.asset('assets/images/eon.png', width: 28, height: 28),
       );
     }
     if (description.contains('revolut')) {
       return CircleAvatar(
-        backgroundColor: Colors.white, // Un fundal deschis pentru Upwork
+        backgroundColor: Colors.white,
         child: Image.asset('assets/images/revolut.png', width: 28, height: 28),
       );
     }
     if (description.contains('starbucks')) {
       return CircleAvatar(
-        backgroundColor: Colors.white, // Un fundal deschis pentru Upwork
+        backgroundColor: Colors.white,
         child: Image.asset(
           'assets/images/starbucks.png',
           width: 28,
@@ -107,7 +102,13 @@ class _HomePageState extends State<HomePage> {
         ),
       );
     }
-    // 2. Dacă nu e un brand, folosește iconița de categorie (logica veche)
+    if (description.contains('asigurare ale')) {
+      return CircleAvatar(
+        backgroundColor: Colors.white,
+        child: Image.asset('assets/images/nn.png', width: 28, height: 28),
+      );
+    }
+
     return CircleAvatar(
       backgroundColor: isExpense
           ? Colors.red.withOpacity(0.1)
@@ -124,50 +125,39 @@ class _HomePageState extends State<HomePage> {
     final settings = Provider.of<SettingsProvider>(context);
     final user = FirebaseAuth.instance.currentUser;
 
-    // Scaffold este exterior
     return Scaffold(
-      // StreamBuilder este BODY-ul Scaffold-ului
       body: StreamBuilder<DocumentSnapshot>(
         stream: _firestoreService.users.doc(user?.uid).snapshots(),
         builder: (context, userSnapshot) {
-          // 1. Loading
+          // FIX CACHE 1: Verificăm doar dacă avem date. Dacă avem (chiar și din cache), afișăm.
           if (!userSnapshot.hasData) {
             return Center(child: CircularProgressIndicator());
           }
 
-          // 2. Extrage numele
           String userName = 'Utilizator';
           if (userSnapshot.data!.exists) {
             var userData = userSnapshot.data!.data() as Map<String, dynamic>;
             userName = userData['name'] ?? userName;
           }
           String greeting = _getGreeting();
-          // 3. Returnează interfața (Stack-ul)
+
           return Stack(
             children: [
-              // --- 1. FUNDALUL VERDE (VALUL) ---
-              // --- 1. FUNDALUL VERDE (CU IMAGINE) ---
               ClipPath(
                 clipper: _TopCurveClipper(),
                 child: Container(
-                  height: 350, // Înălțimea valului
+                  height: 350,
                   decoration: BoxDecoration(
-                    // --- MODIFICAT PENTRU A FOLOSI IMAGINEA ---
                     image: DecorationImage(
-                      image: AssetImage(
-                        'assets/images/fundal.png',
-                      ), // <-- Numele imaginii
-                      fit: BoxFit.cover, // Acoperă tot spațiul
+                      image: AssetImage('assets/images/fundal.png'),
+                      fit: BoxFit.cover,
                     ),
                   ),
                 ),
               ),
-
-              // --- 2. CONȚINUTUL PAGINII ---
               SafeArea(
                 child: Column(
                   children: [
-                    // --- A. ANTETUL (HEADER) ---
                     Padding(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 20.0,
@@ -196,31 +186,22 @@ class _HomePageState extends State<HomePage> {
                               ),
                             ],
                           ),
-
-                          // --- RÂND NOU PENTRU ICONIȚE ---
                           Row(
                             children: [
-                              // --- BUTONUL PENTRU TEMĂ (NOU) ---
                               IconButton(
                                 icon: Icon(
-                                  // Verifică care este tema curentă
                                   Theme.of(context).brightness ==
                                           Brightness.dark
-                                      ? Icons
-                                            .light_mode // E întunecat? Arată soarele
-                                      : Icons
-                                            .dark_mode, // E luminos? Arată luna
+                                      ? Icons.light_mode
+                                      : Icons.dark_mode,
                                   color: Colors.white,
                                 ),
                                 onPressed: () {
-                                  // Obține provider-ul (fără să asculte)
                                   final settings =
                                       Provider.of<SettingsProvider>(
                                         context,
                                         listen: false,
                                       );
-
-                                  // Schimbă tema
                                   if (Theme.of(context).brightness ==
                                       Brightness.dark) {
                                     settings.updateTheme(ThemeMode.light);
@@ -229,28 +210,19 @@ class _HomePageState extends State<HomePage> {
                                   }
                                 },
                               ),
-
-                              // --- BUTONUL DE NOTIFICĂRI (CLOPOȚELUL) ---
                               IconButton(
                                 icon: Icon(
                                   Icons.notifications,
                                   color: Colors.white,
                                 ),
-                                onPressed: () {
-                                  /* TODO: Pagina de notificări */
-                                },
+                                onPressed: () {},
                               ),
                             ],
                           ),
-                          // --- SFÂRȘIT RÂND NOU ---
                         ],
                       ),
                     ),
-
-                    // --- B. CARDUL-SUMAR ---
                     _buildSummaryCard(settings),
-
-                    // --- C. TITLUL LISTEI ---
                     Padding(
                       padding: const EdgeInsets.all(16.0),
                       child: Row(
@@ -264,23 +236,17 @@ class _HomePageState extends State<HomePage> {
                             ),
                           ),
                           TextButton(
-                            onPressed:
-                                widget.onSeeAllPressed, // <-- APELĂM FUNCȚIA
+                            onPressed: widget.onSeeAllPressed,
                             child: Text('Vezi Tot'),
                           ),
                         ],
                       ),
                     ),
-
-                    // --- D. LISTA DE TRANZACȚII ---
                     Expanded(
                       child: StreamBuilder<QuerySnapshot>(
                         stream: _firestoreService.getExpensesStream(),
                         builder: (context, snapshot) {
-                          if (snapshot.connectionState ==
-                              ConnectionState.waiting) {
-                            return Center(child: CircularProgressIndicator());
-                          }
+                          // FIX 2: Gestionăm erorile mai întâi
                           if (snapshot.hasError) {
                             return Center(
                               child: Text(
@@ -288,12 +254,16 @@ class _HomePageState extends State<HomePage> {
                               ),
                             );
                           }
-                          if (!snapshot.hasData ||
-                              snapshot.data!.docs.isEmpty) {
+                          // FIX 3: Afișăm loading doar dacă NU avem date deloc
+                          if (!snapshot.hasData) {
+                            return Center(child: CircularProgressIndicator());
+                          }
+                          if (snapshot.data!.docs.isEmpty) {
                             return Center(
-                              child: Text('Nici o tranzacție adăugată'),
+                              child: Text('Nicio tranzacție adăugată'),
                             );
                           }
+
                           var expenses = snapshot.data!.docs;
 
                           return ListView.builder(
@@ -334,10 +304,22 @@ class _HomePageState extends State<HomePage> {
                                   ),
                                 ),
                                 child: ListTile(
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            TransactionDetailsPage(
+                                              data: data,
+                                              transactionId: expense.id,
+                                            ),
+                                      ),
+                                    );
+                                  },
                                   leading: _buildTransactionLeading(
                                     data,
                                     isExpense,
-                                  ), // <-- APELĂM FUNCȚIA NOUĂ
+                                  ),
                                   title: Text(description),
                                   subtitle: Text(
                                     "${data['category'] ?? 'Fără categorie'} • ${isMyExpense ? 'Tu' : 'Soția'}",
@@ -369,12 +351,11 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  // --- FUNCȚIILE HELPER ---
   Widget _buildSummaryCard(SettingsProvider settings) {
     return Card(
       margin: EdgeInsets.all(16.0),
       elevation: 0,
-      color: accentGreen.withOpacity(0.9),
+      color: const Color(0xff2f7e79).withOpacity(0.9),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       child: Padding(
         padding: const EdgeInsets.all(20.0),
@@ -392,9 +373,11 @@ class _HomePageState extends State<HomePage> {
             StreamBuilder<QuerySnapshot>(
               stream: _firestoreService.getAccountsStream(),
               builder: (context, snapshot) {
+                // FIX 4: La fel și aici, arată datele dacă există
                 if (!snapshot.hasData) {
                   return CircularProgressIndicator(color: Colors.white);
                 }
+
                 double totalBalance = 0;
                 for (var doc in snapshot.data!.docs) {
                   totalBalance +=
@@ -416,7 +399,9 @@ class _HomePageState extends State<HomePage> {
             StreamBuilder<QuerySnapshot>(
               stream: _firestoreService.getExpensesStream(),
               builder: (context, snapshot) {
+                // FIX 5: Arată widget gol doar dacă nu sunt date
                 if (!snapshot.hasData) return SizedBox.shrink();
+
                 double totalIncome = 0;
                 double totalExpenses = 0;
                 for (var doc in snapshot.data!.docs) {

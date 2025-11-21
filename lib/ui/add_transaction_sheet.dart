@@ -90,8 +90,9 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
         _selectedDate,
       );
 
-      if (mounted)
+      if (mounted) {
         Navigator.of(context).pop(); // Se va întoarce la pagina anterioară
+      }
     } catch (e) {
       print('Eroare la salvare: $e');
       ScaffoldMessenger.of(
@@ -231,7 +232,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
 
                           // 1. Categoria
                           DropdownButtonFormField<String>(
-                            value: _selectedCategory,
+                            initialValue: _selectedCategory,
                             hint: Text('Selectează Categoria'),
                             decoration: InputDecoration(
                               labelText: 'Categorie',
@@ -320,7 +321,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                               var accountsList = snapshot.data!;
 
                               return DropdownButtonFormField<String>(
-                                value: _selectedAccountId,
+                                initialValue: _selectedAccountId,
                                 hint: Text('Selectează Contul'),
                                 decoration: InputDecoration(
                                   labelText: 'Cont',
@@ -399,13 +400,13 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                             width: double.infinity,
                             child: ElevatedButton(
                               onPressed: _saveTransaction,
-                              child: Text('Salvează'),
                               style: ElevatedButton.styleFrom(
                                 padding: EdgeInsets.symmetric(vertical: 16),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                               ),
+                              child: Text('Salvează'),
                             ),
                           ),
                         ],

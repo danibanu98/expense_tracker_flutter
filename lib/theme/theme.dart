@@ -92,7 +92,6 @@ ThemeData lightTheme = ThemeData(
   colorScheme: ColorScheme.light(
     primary: accentGreen,
     secondary: accentGreen,
-    background: Color(0xFFF5F5F5),
     surface: Colors.white, // Culoarea cardurilor
   ),
 );

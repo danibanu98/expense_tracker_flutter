@@ -16,15 +16,11 @@ class StatisticsPage extends StatefulWidget {
 class _StatisticsPageState extends State<StatisticsPage> {
   final FirestoreService _firestoreService = FirestoreService();
   DateTime _currentDisplayDate = DateTime.now();
-
-  // --- AICI FOLOSIM LOGICA CORECTĂ ---
   int _selectedPeriodIndex = 2; // 0=Ziua, 1=Săpt, 2=Luna, 3=Anul
   final List<String> _periods = ['Ziua', 'Săpt', 'Luna', 'Anul'];
-  String _selectedType = 'expense';
-  // --- SFÂRȘIT LOGICĂ ---
+  String _selectedType = 'expense'; // 'expense' sau 'income'
 
-  // --- Începutul funcțiilor helper (LIPSEAU LA TINE) ---
-
+  // --- FUNCȚII HELPER PENTRU LOGICĂ ---
   List<QueryDocumentSnapshot> _filterTransactionsByPeriod(
     List<QueryDocumentSnapshot> allTransactions,
     int periodIndex,
@@ -88,7 +84,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
     }
     return totals;
   }
-  // --- Sfârșitul funcțiilor helper ---
 
   @override
   Widget build(BuildContext context) {
@@ -125,7 +120,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
           var allTransactions = snapshot.data!.docs;
 
-          // --- LOGICA (rămâne neschimbată) ---
+          // LOGICA DE FILTRARE
           var periodFilteredTransactions = _filterTransactionsByPeriod(
             allTransactions,
             _selectedPeriodIndex,
@@ -146,6 +141,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                 (b.data() as Map<String, dynamic>)['amount'] ?? 0.0;
             return amountB.compareTo(amountA);
           });
+
           Map<int, double> chartTotals = _calculateChartTotals(
             typeFilteredTransactions,
             _selectedPeriodIndex,
@@ -161,7 +157,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
                 1.2;
           }
           if (maxY == 0) maxY = 10;
-          // --- SFÂRȘIT LOGICĂ ---
 
           return SingleChildScrollView(
             child: Padding(
@@ -169,22 +164,47 @@ class _StatisticsPageState extends State<StatisticsPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // --- SELECTOR DE PERIOADĂ STILIZAT ---
+                  // SELECTOR PERIOADĂ
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: List.generate(4, (index) {
-                      // Construiește fiecare buton individual
-                      return _buildPeriodButton(
-                        text: _periods[index],
-                        index: index,
+                      bool isSelected = _selectedPeriodIndex == index;
+                      return GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _selectedPeriodIndex = index;
+                            _currentDisplayDate = DateTime.now();
+                          });
+                        },
+                        child: Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 25,
+                            vertical: 15,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? Theme.of(context).colorScheme.primary
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(10.0),
+                          ),
+                          child: Text(
+                            _periods[index],
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: isSelected
+                                  ? Colors.white
+                                  : Colors.grey[600],
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
                       );
                     }),
                   ),
 
-                  // --- AM ȘTERS SELECTORUL DE DATĂ (< 2025 >) ---
                   SizedBox(height: 16),
 
-                  // --- FILTRUL (Cheltuieli / Venituri) STILIZAT ---
+                  // FILTRU TIP
                   Align(
                     alignment: Alignment.centerRight,
                     child: Container(
@@ -231,14 +251,14 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
                   SizedBox(height: 20),
 
-                  // --- GRAFICUL LINIAR ---
+                  // GRAFIC
                   SizedBox(
                     height: 250,
                     child: _buildLineChart(spots, maxY, _selectedPeriodIndex),
                   ),
-                  SizedBox(height: 50),
+                  SizedBox(height: 30),
 
-                  // --- LISTA "TOP" ---
+                  // LISTA TOP
                   Text(
                     _selectedType == 'expense'
                         ? 'Top Cheltuieli'
@@ -247,7 +267,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
                   ),
                   SizedBox(height: 10),
 
-                  // ListView.builder
                   if (typeFilteredTransactions.isEmpty)
                     Center(
                       child: Padding(
@@ -268,16 +287,17 @@ class _StatisticsPageState extends State<StatisticsPage> {
                         var doc = sortedTransactions[index];
                         var data = doc.data() as Map<String, dynamic>;
 
+                        // Calculăm dacă e cheltuială
+                        bool isExpense =
+                            (data['type'] ?? 'expense') == 'expense';
+
                         return Card(
                           elevation: 2,
                           margin: EdgeInsets.symmetric(vertical: 6),
                           child: ListTile(
-                            leading: Icon(
-                              _getIconForCategory(data['category'] ?? 'Altul'),
-                              color: _selectedType == 'expense'
-                                  ? Colors.red[300]
-                                  : const Color(0xff2f7e79),
-                            ),
+                            // --- AICI FOLOSIM LOGICA NOUĂ PENTRU ICONIȚĂ ---
+                            leading: _buildTransactionLeading(data, isExpense),
+                            // ----------------------------------------------
                             title: Text(
                               data['description'] ?? 'N/A',
                               style: TextStyle(fontWeight: FontWeight.bold),
@@ -286,11 +306,11 @@ class _StatisticsPageState extends State<StatisticsPage> {
                               data['category'] ?? 'Fără categorie',
                             ),
                             trailing: Text(
-                              '${_selectedType == 'expense' ? '-' : '+'}${settings.currencySymbol}${(data['amount'] ?? 0.0).toStringAsFixed(2)}',
+                              '${isExpense ? '-' : '+'}${settings.currencySymbol}${(data['amount'] ?? 0.0).toStringAsFixed(2)}',
                               style: TextStyle(
-                                color: _selectedType == 'expense'
+                                color: isExpense
                                     ? Colors.red[400]
-                                    : const Color(0xff2f7e79),
+                                    : Colors.green[400],
                                 fontWeight: FontWeight.bold,
                                 fontSize: 16,
                               ),
@@ -308,7 +328,85 @@ class _StatisticsPageState extends State<StatisticsPage> {
     );
   }
 
-  // --- FUNCȚIILE HELPER (Acum sunt la locul lor) ---
+  // --- FUNCȚIA HELPER PENTRU ICONIȚE (CU BRANDING) ---
+  // Am adăugat această funcție din HomePage
+  Widget _buildTransactionLeading(Map<String, dynamic> data, bool isExpense) {
+    String description = (data['description'] ?? '').toLowerCase();
+    String category = data['category'] ?? 'Altul';
+
+    // Logica pentru Brand-uri
+    if (description.contains('netflix')) {
+      return CircleAvatar(
+        backgroundColor: Colors.white,
+        child: Image.asset('assets/images/netflix.png', width: 28, height: 28),
+      );
+    }
+    if (description.contains('youtube')) {
+      return CircleAvatar(
+        backgroundColor: Colors.white,
+        child: Image.asset('assets/images/youtube.png', width: 28, height: 28),
+      );
+    }
+    if (description.contains('upwork')) {
+      return CircleAvatar(
+        backgroundColor: Colors.green[50],
+        child: Image.asset('assets/images/upwork.png', width: 28, height: 28),
+      );
+    }
+    if (description.contains('orange')) {
+      return CircleAvatar(
+        backgroundColor: Colors.white,
+        child: Image.asset('assets/images/orange.png', width: 28, height: 28),
+      );
+    }
+    if (description.contains('digi')) {
+      return CircleAvatar(
+        backgroundColor: Colors.white,
+        child: Image.asset('assets/images/digi.png', width: 28, height: 28),
+      );
+    }
+    if (description.contains('enel')) {
+      return CircleAvatar(
+        backgroundColor: Colors.white,
+        child: Image.asset('assets/images/enel.png', width: 28, height: 28),
+      );
+    }
+    if (description.contains('eon')) {
+      return CircleAvatar(
+        backgroundColor: Colors.white,
+        child: Image.asset('assets/images/eon.png', width: 28, height: 28),
+      );
+    }
+    if (description.contains('revolut')) {
+      return CircleAvatar(
+        backgroundColor: Colors.white,
+        child: Image.asset('assets/images/revolut.png', width: 28, height: 28),
+      );
+    }
+    if (description.contains('starbucks')) {
+      return CircleAvatar(
+        backgroundColor: Colors.white,
+        child: Image.asset(
+          'assets/images/starbucks.png',
+          width: 28,
+          height: 28,
+        ),
+      );
+    }
+
+    // Logica pentru Categorii Generice
+    return CircleAvatar(
+      backgroundColor: isExpense
+          ? Colors.red.withOpacity(0.1)
+          : Colors.green.withOpacity(
+              0.1,
+            ), // Folosim green standard dacă accentGreen nu e disponibil ușor
+      child: Icon(
+        _getIconForCategory(category),
+        color: isExpense ? Colors.red[300] : Colors.green[300],
+      ),
+    );
+  }
 
   IconData _getIconForCategory(String category) {
     switch (category) {
@@ -331,46 +429,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
       default:
         return Icons.money;
     }
-  }
-
-  // --- FUNCȚIE NOUĂ PENTRU BUTOANELE DE PERIOADĂ STILIZATE ---
-  Widget _buildPeriodButton({required String text, required int index}) {
-    // Verifică dacă acest buton este cel selectat
-    bool isSelected = _selectedPeriodIndex == index;
-
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _selectedPeriodIndex = index;
-          _currentDisplayDate = DateTime.now(); // Resetează data la "acum"
-        });
-      },
-      child: Container(
-        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-        decoration: BoxDecoration(
-          // --- AICI E MAGIA ---
-          // Doar cel activ are fundal verde și colțuri rotunjite
-          color: isSelected
-              ? Theme.of(context)
-                    .colorScheme
-                    .primary // Verde (Activ)
-              : Colors.transparent, // Transparent (Inactiv)
-          borderRadius: BorderRadius.circular(10.0),
-        ),
-        child: Text(
-          text,
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            // Schimbă culoarea textului
-            color: isSelected
-                ? Colors
-                      .white // Alb (Activ)
-                : Colors.grey[600], // Gri (Inactiv)
-            fontSize: 16,
-          ),
-        ),
-      ),
-    );
   }
 
   Widget _buildLineChart(List<FlSpot> spots, double maxY, int periodIndex) {
@@ -525,7 +583,4 @@ class _StatisticsPageState extends State<StatisticsPage> {
       child: Text(text, style: style),
     );
   }
-
-  // --- AM ȘTERS _previousPeriod, _nextPeriod, _formatPeriodText ---
-  // Deoarece ai cerut să eliminăm filtrul de perioadă
 }

@@ -18,12 +18,12 @@ class ProfilePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // 1. Obține serviciul și utilizatorul curent
-    final FirestoreService _firestoreService = FirestoreService();
+    final FirestoreService firestoreService = FirestoreService();
     final user = FirebaseAuth.instance.currentUser;
 
     // 2. StreamBuilder principal: Ascultă documentul 'users'
     return StreamBuilder<DocumentSnapshot>(
-      stream: _firestoreService.users.doc(user?.uid).snapshots(),
+      stream: firestoreService.users.doc(user?.uid).snapshots(),
       builder: (context, userSnapshot) {
         // Cazul 1: Se încarcă datele utilizatorului
         if (!userSnapshot.hasData ||
@@ -107,7 +107,7 @@ class ProfilePage extends StatelessWidget {
                           // --- CARDUL DE INVITAȚIE (NOU) ---
                           _buildInviteCard(
                             context,
-                            _firestoreService,
+                            firestoreService,
                             householdId,
                           ),
                           SizedBox(height: 20),
