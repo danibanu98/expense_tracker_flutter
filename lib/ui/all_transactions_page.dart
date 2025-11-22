@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:expense_tracker_nou/services/firestore_service.dart';
-import 'package:expense_tracker_nou/theme/theme.dart';
 import 'package:expense_tracker_nou/ui/transaction_details_page.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
