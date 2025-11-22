@@ -5,6 +5,7 @@ import 'package:expense_tracker_nou/services/firestore_service.dart';
 import 'package:provider/provider.dart';
 import 'package:expense_tracker_nou/providers/settings_provider.dart';
 import 'package:expense_tracker_nou/ui/transaction_details_page.dart';
+import 'package:expense_tracker_nou/ui/all_transactions_page.dart';
 
 class HomePage extends StatefulWidget {
   final VoidCallback onSeeAllPressed;
@@ -248,7 +249,14 @@ class _HomePageState extends State<HomePage> {
                             ),
                           ),
                           TextButton(
-                            onPressed: widget.onSeeAllPressed,
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => AllTransactionsPage(),
+                                ),
+                              );
+                            },
                             child: Text('Vezi Tot'),
                           ),
                         ],

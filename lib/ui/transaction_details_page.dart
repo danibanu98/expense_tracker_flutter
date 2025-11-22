@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:expense_tracker_nou/ui/add_transaction_sheet.dart';
 
 class TransactionDetailsPage extends StatelessWidget {
   final Map<String, dynamic> data;
@@ -244,6 +245,34 @@ class TransactionDetailsPage extends StatelessWidget {
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
                         ),
+                      ),
+                      // --- GRUP DE BUTOANE (NOU) ---
+                      Row(
+                        children: [
+                          // BUTONUL EDITARE
+                          IconButton(
+                            icon: Icon(Icons.edit, color: Colors.white),
+                            onPressed: () async {
+                              // Navighează la pagina de editare și așteaptă rezultatul
+                              final result = await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => AddTransactionSheet(
+                                    transactionId:
+                                        transactionId, // Trimite ID-ul
+                                    transactionData: data, // Trimite datele
+                                  ),
+                                ),
+                              );
+
+                              // Dacă s-a editat cu succes, închide și pagina de detalii
+                              // (ca să se întoarcă la Home și să vadă modificările)
+                              if (result == true && context.mounted) {
+                                Navigator.of(context).pop();
+                              }
+                            },
+                          ),
+                        ],
                       ),
                       IconButton(
                         icon: Icon(Icons.delete, color: Colors.white),

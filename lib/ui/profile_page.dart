@@ -50,10 +50,9 @@ class ProfilePage extends StatelessWidget {
         return Scaffold(
           body: Container(
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [darkGreen, accentGreen],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+              image: DecorationImage(
+                image: AssetImage('assets/images/fundal.png'),
+                fit: BoxFit.cover,
               ),
             ),
             child: SafeArea(

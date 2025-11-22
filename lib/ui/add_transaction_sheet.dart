@@ -1,25 +1,36 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:expense_tracker_nou/providers/settings_provider.dart';
 import 'package:expense_tracker_nou/services/firestore_service.dart';
+import 'package:expense_tracker_nou/theme/theme.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 class AddTransactionSheet extends StatefulWidget {
-  const AddTransactionSheet({super.key});
+  // Parametri opționali pentru modul EDITARE
+  final String? transactionId;
+  final Map<String, dynamic>? transactionData;
+
+  const AddTransactionSheet({
+    super.key,
+    this.transactionId,
+    this.transactionData,
+  });
 
   @override
   State<AddTransactionSheet> createState() => _AddTransactionSheetState();
 }
 
 class _AddTransactionSheetState extends State<AddTransactionSheet> {
-  // Toate variabilele de stare și controllerele rămân la fel
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _amountController = TextEditingController();
   String _selectedType = 'expense';
+
   final FirestoreService _firestoreService = FirestoreService();
   String? _selectedAccountId;
-  late Future<List<QueryDocumentSnapshot>> _accountsFuture;
+  List<QueryDocumentSnapshot> _accounts = [];
+  bool _isLoadingAccounts = true;
+
   final List<String> _expenseCategories = [
     'Mâncare',
     'Transport',
@@ -32,13 +43,45 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
   String? _selectedCategory;
   DateTime _selectedDate = DateTime.now();
 
+  bool get _isEditing =>
+      widget.transactionId != null; // Helper pentru a ști modul
+
   @override
   void initState() {
     super.initState();
-    _selectedCategory = _selectedType == 'expense'
-        ? _expenseCategories.first
-        : _incomeCategories.first;
-    _accountsFuture = _firestoreService.getAccountsList();
+    _loadAccounts();
+
+    // --- LOGICA DE INIȚIALIZARE (EDIT VS NEW) ---
+    if (_isEditing) {
+      // Suntem în modul EDITARE: Pre-completăm câmpurile
+      final data = widget.transactionData!;
+      _descriptionController.text = data['description'] ?? '';
+      _amountController.text = (data['amount'] ?? 0.0).toString();
+      _selectedType = data['type'] ?? 'expense';
+      _selectedCategory = data['category'];
+      _selectedAccountId = data['accountId']; // Contul original
+
+      Timestamp timestamp = data['timestamp'] ?? Timestamp.now();
+      _selectedDate = timestamp.toDate();
+    } else {
+      // Suntem în modul ADAUGARE: Valori implicite
+      _selectedCategory = _expenseCategories.first;
+    }
+  }
+
+  Future<void> _loadAccounts() async {
+    try {
+      var accountsList = await _firestoreService.getAccountsList();
+      setState(() {
+        _accounts = accountsList;
+        _isLoadingAccounts = false;
+      });
+    } catch (e) {
+      print("Eroare la încărcarea conturilor: $e");
+      setState(() {
+        _isLoadingAccounts = false;
+      });
+    }
   }
 
   Future<void> _selectDate(BuildContext context) async {
@@ -71,27 +114,36 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
         _selectedAccountId == null ||
         _selectedCategory == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Completează toate câmpurile, inclusiv contul și categoria.',
-          ),
-        ),
+        SnackBar(content: Text('Completează toate câmpurile corect.')),
       );
       return;
     }
 
     try {
-      await _firestoreService.addTransaction(
-        description,
-        amount,
-        _selectedType,
-        _selectedAccountId!,
-        _selectedCategory!,
-        _selectedDate,
-      );
-
-      if (mounted) {
-        Navigator.of(context).pop(); // Se va întoarce la pagina anterioară
+      if (_isEditing) {
+        // --- APELĂM UPDATE ---
+        await _firestoreService.updateTransaction(
+          widget.transactionId!,
+          description,
+          amount,
+          _selectedType,
+          _selectedCategory!,
+          _selectedDate,
+          // Notă: Nu trimitem accountId pentru că nu schimbăm contul la editare
+        );
+        // Întoarce un rezultat 'true' pentru a anunța pagina anterioară să se actualizeze
+        if (mounted) Navigator.of(context).pop(true);
+      } else {
+        // --- APELĂM ADD ---
+        await _firestoreService.addTransaction(
+          description,
+          amount,
+          _selectedType,
+          _selectedAccountId!,
+          _selectedCategory!,
+          _selectedDate,
+        );
+        if (mounted) Navigator.of(context).pop();
       }
     } catch (e) {
       print('Eroare la salvare: $e');
@@ -106,21 +158,18 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
     final settings = Provider.of<SettingsProvider>(context, listen: false);
 
     return Scaffold(
-      // Folosim un Stack pentru a suprapune valul verde și conținutul
       body: Stack(
         children: [
           // --- 1. FUNDALUL VERDE (VALUL) ---
-          // --- 1. FUNDALUL VERDE (CU IMAGINE) ---
           ClipPath(
             clipper: _TopCurveClipper(),
             child: Container(
               height: MediaQuery.of(context).size.height * 0.45,
               decoration: BoxDecoration(
-                // --- MODIFICAT PENTRU A FOLOSI IMAGINEA ---
                 image: DecorationImage(
                   image: AssetImage(
                     'assets/images/fundal.png',
-                  ), // <-- Numele imaginii
+                  ), // Asigură-te că ai imaginea
                   fit: BoxFit.cover,
                 ),
               ),
@@ -131,50 +180,44 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
           SafeArea(
             child: Column(
               children: [
-                SizedBox(height: 50),
-                // --- A. ANTETUL (HEADER) PERSONALIZAT ---
+                // --- A. ANTETUL ---
                 Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10.0,
-                    vertical: 0.0,
-                  ), // Ajustăm padding-ul
+                  padding: const EdgeInsets.symmetric(horizontal: 10.0),
                   child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // Butonul de înapoi
                       IconButton(
                         icon: Icon(Icons.arrow_back, color: Colors.white),
                         onPressed: () => Navigator.of(context).pop(),
                       ),
-                      // Titlul (centrat)
-                      Expanded(
-                        child: Text(
-                          _selectedType == 'expense'
-                              ? 'Adaugă Cheltuială'
-                              : 'Adaugă Venit',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
+                      Text(
+                        _isEditing
+                            ? 'Editează Tranzacția'
+                            : (_selectedType == 'expense'
+                                  ? 'Adaugă Cheltuială'
+                                  : 'Adaugă Venit'),
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
                         ),
                       ),
-                      SizedBox(width: 48.0),
+                      SizedBox(width: 48), // Spacer pentru centrare
                     ],
                   ),
                 ),
-                SizedBox(height: 60), // Spațiu după header și înainte de card
+                SizedBox(height: 60),
+
                 // --- B. CARDUL ALB (FORMULARUL) ---
                 Expanded(
                   child: SingleChildScrollView(
                     child: Container(
                       margin: EdgeInsets.symmetric(horizontal: 16),
-                      padding: const EdgeInsets.all(24.0), // Padding intern
+                      padding: const EdgeInsets.all(24.0),
                       decoration: BoxDecoration(
                         color: Theme.of(context).colorScheme.surface,
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
-                          // Adăugăm o umbră subtilă
                           BoxShadow(
                             color: Colors.black.withOpacity(0.05),
                             blurRadius: 10,
@@ -183,11 +226,9 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                         ],
                       ),
                       child: Column(
-                        mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          // --- TOGGLE BUTTONS (acum în interiorul cardului) ---
-                          // Aici am adăugat și centrat ToggleButtons
+                          // Toggle Buttons
                           Center(
                             child: ToggleButtons(
                               isSelected: [
@@ -208,7 +249,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                               selectedColor: Colors.white,
                               fillColor: _selectedType == 'expense'
                                   ? Colors.red[400]
-                                  : const Color(0xff2f7e79),
+                                  : Colors.green[400],
                               children: [
                                 Padding(
                                   padding: const EdgeInsets.symmetric(
@@ -225,14 +266,11 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                               ],
                             ),
                           ),
-                          SizedBox(
-                            height: 30,
-                          ), // Mai mult spațiu după comutator
-                          // Câmpurile (în ordinea corectă, nemodificate)
+                          SizedBox(height: 30),
 
                           // 1. Categoria
                           DropdownButtonFormField<String>(
-                            initialValue: _selectedCategory,
+                            value: _selectedCategory,
                             hint: Text('Selectează Categoria'),
                             decoration: InputDecoration(
                               labelText: 'Categorie',
@@ -244,18 +282,15 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                                 (_selectedType == 'expense'
                                         ? _expenseCategories
                                         : _incomeCategories)
-                                    .map((category) {
-                                      return DropdownMenuItem(
+                                    .map(
+                                      (category) => DropdownMenuItem(
                                         value: category,
                                         child: Text(category),
-                                      );
-                                    })
+                                      ),
+                                    )
                                     .toList(),
-                            onChanged: (value) {
-                              setState(() {
-                                _selectedCategory = value;
-                              });
-                            },
+                            onChanged: (value) =>
+                                setState(() => _selectedCategory = value),
                           ),
                           SizedBox(height: 20),
 
@@ -270,7 +305,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                               fontWeight: FontWeight.bold,
                               color: _selectedType == 'expense'
                                   ? Colors.red[400]
-                                  : const Color(0xff2f7e79),
+                                  : Colors.green[400],
                             ),
                             decoration: InputDecoration(
                               labelText: 'Sumă',
@@ -278,9 +313,6 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                               prefixStyle: TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
-                                color: Theme.of(
-                                  context,
-                                ).textTheme.bodyLarge?.color,
                               ),
                               hintText: '0.00',
                               border: OutlineInputBorder(
@@ -290,70 +322,52 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                           ),
                           SizedBox(height: 20),
 
-                          // 3. Contul (cu FutureBuilder)
-                          FutureBuilder<List<QueryDocumentSnapshot>>(
-                            future:
-                                _accountsFuture, // Viitorul pe care îl așteptăm
-                            builder: (context, snapshot) {
-                              // Cazul 1: Încă se încarcă?
-                              if (snapshot.connectionState ==
-                                  ConnectionState.waiting) {
-                                return Center(
-                                  child: CircularProgressIndicator(),
-                                );
-                              }
-
-                              // Cazul 2: A apărut o eroare?
-                              if (snapshot.hasError) {
-                                return Text(
-                                  'Eroare la încărcarea conturilor: ${snapshot.error}',
-                                );
-                              }
-
-                              // Cazul 3: Nu avem date (lista e goală)?
-                              if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                                return Text(
-                                  'Niciun cont. Mergi la "Portofel" și adaugă unul.',
-                                );
-                              }
-
-                              // Cazul 4: Avem date! Construim dropdown-ul
-                              var accountsList = snapshot.data!;
-
-                              return DropdownButtonFormField<String>(
-                                initialValue: _selectedAccountId,
-                                hint: Text('Selectează Contul'),
-                                decoration: InputDecoration(
-                                  labelText: 'Cont',
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
+                          // 3. Contul (Dezactivat la Editare)
+                          if (_isLoadingAccounts)
+                            Center(child: CircularProgressIndicator())
+                          else
+                            IgnorePointer(
+                              // <-- Blochează interacțiunea dacă e editare
+                              ignoring: _isEditing,
+                              child: Opacity(
+                                // <-- Îl face puțin transparent ca să arate dezactivat
+                                opacity: _isEditing ? 0.5 : 1.0,
+                                child: DropdownButtonFormField<String>(
+                                  value: _selectedAccountId,
+                                  hint: Text('Selectează Contul'),
+                                  decoration: InputDecoration(
+                                    labelText:
+                                        'Cont ' +
+                                        (_isEditing
+                                            ? '(Nu poate fi schimbat)'
+                                            : ''),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                  ),
+                                  items: _accounts.map((doc) {
+                                    var account =
+                                        doc.data() as Map<String, dynamic>;
+                                    return DropdownMenuItem(
+                                      value: doc.id,
+                                      child: Text(
+                                        account['name'] ?? 'Cont Fără Nume',
+                                      ),
+                                    );
+                                  }).toList(),
+                                  onChanged: (value) => setState(
+                                    () => _selectedAccountId = value,
                                   ),
                                 ),
-                                items: accountsList.map((doc) {
-                                  var account =
-                                      doc.data() as Map<String, dynamic>;
-                                  return DropdownMenuItem(
-                                    value: doc.id,
-                                    child: Text(
-                                      account['name'] ?? 'Cont Fără Nume',
-                                    ),
-                                  );
-                                }).toList(),
-                                onChanged: (value) {
-                                  setState(() {
-                                    _selectedAccountId = value;
-                                  });
-                                },
-                              );
-                            },
-                          ),
+                              ),
+                            ),
                           SizedBox(height: 20),
 
                           // 4. Descrierea
                           TextField(
                             controller: _descriptionController,
                             decoration: InputDecoration(
-                              labelText: 'Descriere (ex: Netflix, Salariu)',
+                              labelText: 'Descriere',
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
@@ -400,13 +414,15 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                             width: double.infinity,
                             child: ElevatedButton(
                               onPressed: _saveTransaction,
+                              child: Text(
+                                _isEditing ? 'Actualizează' : 'Salvează',
+                              ),
                               style: ElevatedButton.styleFrom(
                                 padding: EdgeInsets.symmetric(vertical: 16),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                               ),
-                              child: Text('Salvează'),
                             ),
                           ),
                         ],
@@ -423,7 +439,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
   }
 }
 
-// --- CLASA HELPER PENTRU "VALUL" VERDE (Copiată de pe HomePage) ---
+// Clasa Clipper (aceeași)
 class _TopCurveClipper extends CustomClipper<Path> {
   @override
   Path getClip(Size size) {

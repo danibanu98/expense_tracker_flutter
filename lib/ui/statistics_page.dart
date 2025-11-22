@@ -203,31 +203,37 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
                   SizedBox(height: 16),
 
-                  // FILTRU TIP
+                  // --- FILTRUL (Cheltuieli / Venituri) STILIZAT (Tip "Pilulă") ---
                   Align(
                     alignment: Alignment.centerRight,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 12.0,
-                        vertical: 4.0,
+                        horizontal: 25.0,
+                        vertical: 2.0,
                       ),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).cardColor,
-                        borderRadius: BorderRadius.circular(12.0),
-                        border: Border.all(
-                          color: Theme.of(
-                            context,
-                          ).dividerColor.withOpacity(0.5),
-                        ),
+                        // Fundal Verde (pentru a semăna cu celălalt, dar vizibil pe alb)
+                        color: Theme.of(context).colorScheme.primary,
+                        borderRadius: BorderRadius.circular(
+                          20.0,
+                        ), // Colțuri mai rotunjite (Pilulă)
+                        // Fără border sau un border subtil
                       ),
                       child: DropdownButtonHideUnderline(
                         child: DropdownButton<String>(
                           value: _selectedType,
-                          icon: Icon(
+                          dropdownColor: Theme.of(
+                            context,
+                          ).colorScheme.primary, // Lista verde când se deschide
+                          icon: const Icon(
                             Icons.keyboard_arrow_down,
-                            color: Theme.of(context).colorScheme.primary,
+                            color: Colors.white,
+                          ), // Săgeată albă
+                          style: const TextStyle(
+                            color: Colors.white, // Text alb
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14, // Font compact
                           ),
-                          style: Theme.of(context).textTheme.bodyMedium,
                           items: [
                             DropdownMenuItem(
                               value: 'expense',
@@ -248,6 +254,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                     ),
                   ),
 
+                  // --- SFÂRȘIT MODIFICARE ---
                   SizedBox(height: 20),
 
                   // GRAFIC
