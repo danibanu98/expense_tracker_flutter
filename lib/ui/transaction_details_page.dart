@@ -2,11 +2,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:expense_tracker_nou/providers/settings_provider.dart';
 import 'package:expense_tracker_nou/services/firestore_service.dart';
 import 'package:expense_tracker_nou/theme/theme.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:expense_tracker_nou/ui/add_transaction_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
-import 'package:expense_tracker_nou/ui/add_transaction_sheet.dart';
 
 class TransactionDetailsPage extends StatelessWidget {
   final Map<String, dynamic> data;
@@ -18,19 +17,32 @@ class TransactionDetailsPage extends StatelessWidget {
     required this.transactionId,
   });
 
-  // --- FUNCȚIE CORECTATĂ PENTRU ICONIȚE MARI ---
+  // --- FUNCȚIE PENTRU A OBȚINE NUMELE UTILIZATORULUI DIN DB ---
+  Future<String> _getUserName(String uid) async {
+    try {
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .get();
+      if (userDoc.exists) {
+        return userDoc.get('name') ?? 'Necunoscut';
+      }
+      return 'Necunoscut';
+    } catch (e) {
+      return 'Eroare';
+    }
+  }
+
+  // --- FUNCȚIE PENTRU ICONIȚE MARI (BRANDURI) ---
   Widget _buildBigTransactionIcon(Map<String, dynamic> data, bool isExpense) {
     String description = (data['description'] ?? '').toLowerCase();
     String category = data['category'] ?? 'Altul';
-
-    // Mărimea mare pentru pagina de detalii
     double imageSize = 50;
 
-    // Logica pentru Brand-uri (folosim imageSize = 50)
     if (description.contains('netflix')) {
       return CircleAvatar(
         radius: 40,
-        backgroundColor: Colors.black, // Netflix are fundal negru de obicei
+        backgroundColor: Colors.white, // Netflix are fundal negru de obicei
         child: Image.asset(
           'assets/images/netflix.png',
           width: imageSize,
@@ -41,20 +53,9 @@ class TransactionDetailsPage extends StatelessWidget {
     if (description.contains('asigurare ale')) {
       return CircleAvatar(
         radius: 40,
-        backgroundColor: Colors.black, // Netflix are fundal negru de obicei
+        backgroundColor: Colors.white, // Netflix are fundal negru de obicei
         child: Image.asset(
           'assets/images/nn.png',
-          width: imageSize,
-          height: imageSize,
-        ),
-      );
-    }
-    if (description.contains('youtube')) {
-      return CircleAvatar(
-        radius: 40,
-        backgroundColor: Colors.white,
-        child: Image.asset(
-          'assets/images/youtube.png',
           width: imageSize,
           height: imageSize,
         ),
@@ -137,19 +138,7 @@ class TransactionDetailsPage extends StatelessWidget {
         ),
       );
     }
-    if (description.contains('upwork')) {
-      return CircleAvatar(
-        radius: 40,
-        backgroundColor: Colors.green[50],
-        child: Image.asset(
-          'assets/images/upwork.png',
-          width: imageSize,
-          height: imageSize,
-        ),
-      );
-    }
-
-    // Logica Generic (dacă nu e brand)
+    // Logica Generic
     return CircleAvatar(
       radius: 40,
       backgroundColor: isExpense
@@ -157,9 +146,17 @@ class TransactionDetailsPage extends StatelessWidget {
           : const Color(0xff2f7e79).withOpacity(0.1),
       child: Icon(
         _getIconForCategory(category),
-        size: 40, // Iconiță mare
+        size: 40,
         color: isExpense ? Colors.red[400] : const Color(0xff2f7e79),
       ),
+    );
+  }
+
+  Widget _buildBrandAvatar(String assetPath, Color bgColor, double size) {
+    return CircleAvatar(
+      radius: 40,
+      backgroundColor: bgColor,
+      child: Image.asset(assetPath, width: size, height: size),
     );
   }
 
@@ -201,23 +198,20 @@ class TransactionDetailsPage extends StatelessWidget {
     DateTime date = timestamp.toDate();
     String formattedDate = DateFormat('d MMMM yyyy', 'ro').format(date);
     String formattedTime = DateFormat('HH:mm').format(date);
-
     String ownerUid = data['uid'] ?? '';
-    String currentUserUid = FirebaseAuth.instance.currentUser?.uid ?? '';
-    bool isMe = ownerUid == currentUserUid;
 
     return Scaffold(
       body: Stack(
         children: [
+          // --- 1. FUNDALUL VERDE ---
           ClipPath(
             clipper: _TopCurveClipper(),
             child: Container(
               height: 300,
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [accentGreen.withOpacity(0.8), accentGreen],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+                image: DecorationImage(
+                  image: AssetImage('assets/images/fundal.png'),
+                  fit: BoxFit.cover,
                 ),
               ),
             ),
@@ -226,6 +220,7 @@ class TransactionDetailsPage extends StatelessWidget {
           SafeArea(
             child: Column(
               children: [
+                // --- 2. ANTET ---
                 Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 10,
@@ -246,66 +241,59 @@ class TransactionDetailsPage extends StatelessWidget {
                           color: Colors.white,
                         ),
                       ),
-                      // --- GRUP DE BUTOANE (NOU) ---
+                      // --- GRUP DE BUTOANE (EDIT & DELETE) ---
                       Row(
                         children: [
-                          // BUTONUL EDITARE
                           IconButton(
                             icon: Icon(Icons.edit, color: Colors.white),
                             onPressed: () async {
-                              // Navighează la pagina de editare și așteaptă rezultatul
                               final result = await Navigator.push(
                                 context,
                                 MaterialPageRoute(
                                   builder: (context) => AddTransactionSheet(
-                                    transactionId:
-                                        transactionId, // Trimite ID-ul
-                                    transactionData: data, // Trimite datele
+                                    transactionId: transactionId,
+                                    transactionData: data,
                                   ),
                                 ),
                               );
-
-                              // Dacă s-a editat cu succes, închide și pagina de detalii
-                              // (ca să se întoarcă la Home și să vadă modificările)
-                              if (result == true && context.mounted) {
+                              if (result == true && context.mounted)
                                 Navigator.of(context).pop();
-                              }
+                            },
+                          ),
+                          IconButton(
+                            icon: Icon(Icons.delete, color: Colors.white),
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (ctx) => AlertDialog(
+                                  title: Text('Ștergi tranzacția?'),
+                                  content: Text(
+                                    'Această acțiune este ireversibilă.',
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(ctx).pop(),
+                                      child: Text('Anulează'),
+                                    ),
+                                    TextButton(
+                                      onPressed: () {
+                                        firestoreService.deleteExpense(
+                                          transactionId,
+                                        );
+                                        Navigator.of(ctx).pop();
+                                        Navigator.of(context).pop();
+                                      },
+                                      child: Text(
+                                        'Șterge',
+                                        style: TextStyle(color: Colors.red),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
                             },
                           ),
                         ],
-                      ),
-                      IconButton(
-                        icon: Icon(Icons.delete, color: Colors.white),
-                        onPressed: () {
-                          showDialog(
-                            context: context,
-                            builder: (ctx) => AlertDialog(
-                              title: Text('Ștergi tranzacția?'),
-                              content: Text(
-                                'Această acțiune este ireversibilă.',
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.of(ctx).pop(),
-                                  child: Text('Anulează'),
-                                ),
-                                TextButton(
-                                  onPressed: () {
-                                    firestoreService.deleteExpense(
-                                      transactionId,
-                                    );
-                                    Navigator.of(ctx).pop();
-                                    Navigator.of(context).pop();
-                                  },
-                                  child: Text(
-                                    'Șterge',
-                                    style: TextStyle(color: Colors.red),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
                       ),
                     ],
                   ),
@@ -313,6 +301,7 @@ class TransactionDetailsPage extends StatelessWidget {
 
                 SizedBox(height: 20),
 
+                // --- 3. CARDUL PRINCIPAL ---
                 Expanded(
                   child: Container(
                     width: double.infinity,
@@ -335,49 +324,146 @@ class TransactionDetailsPage extends StatelessWidget {
                       padding: EdgeInsets.all(24),
                       child: Column(
                         children: [
-                          // --- APELĂM FUNCȚIA CORECTĂ ---
+                          // A. Iconița Mare
                           _buildBigTransactionIcon(data, isExpense),
-                          // ------------------------------
                           SizedBox(height: 16),
 
-                          Text(
-                            category,
-                            style: TextStyle(fontSize: 16, color: Colors.grey),
-                          ),
-                          SizedBox(height: 8),
-                          Text(
-                            description,
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
+                          // B. Pilula cu Tipul (Venit/Cheltuială)
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 6,
                             ),
-                            textAlign: TextAlign.center,
+                            decoration: BoxDecoration(
+                              color: isExpense
+                                  ? Colors.red.withOpacity(0.1)
+                                  : const Color(0xff2f7e79).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              isExpense ? 'Cheltuială' : 'Venit',
+                              style: TextStyle(
+                                color: isExpense
+                                    ? Colors.red[400]
+                                    : const Color(0xff2f7e79),
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                           ),
-                          SizedBox(height: 16),
+                          SizedBox(height: 10),
 
+                          // C. Suma Mare
                           Text(
                             '${isExpense ? '-' : '+'}${settings.currencySymbol}${amount.toStringAsFixed(2)}',
                             style: TextStyle(
-                              fontSize: 32,
+                              fontSize: 36,
                               fontWeight: FontWeight.bold,
-                              color: isExpense
-                                  ? Colors.red[400]
-                                  : Colors.green[400],
+                              color: Theme.of(
+                                context,
+                              ).textTheme.bodyLarge?.color,
                             ),
                           ),
 
                           SizedBox(height: 40),
+
+                          // D. Header "Transaction details"
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Detalii Tranzacție',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Icon(Icons.keyboard_arrow_up, color: Colors.grey),
+                            ],
+                          ),
+                          SizedBox(height: 20),
+
+                          // E. Lista de Detalii
+                          _buildDetailRow(
+                            context,
+                            'Status',
+                            'Finalizat',
+                            textColor: isExpense
+                                ? Colors.red
+                                : const Color(0xff2f7e79),
+                            isBold: true,
+                          ),
+
+                          // --- AICI E SCHIMBAREA: Numele Real ---
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 12.0),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Adăugat de',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                                FutureBuilder<String>(
+                                  future: _getUserName(
+                                    ownerUid,
+                                  ), // Căutăm numele în DB
+                                  builder: (context, snapshot) {
+                                    if (snapshot.connectionState ==
+                                        ConnectionState.waiting) {
+                                      return SizedBox(
+                                        width: 15,
+                                        height: 15,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      );
+                                    }
+                                    return Text(
+                                      snapshot.data ??
+                                          '...', // Afișăm numele real
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // --------------------------------------
+                          _buildDetailRow(context, 'Ora', formattedTime),
+                          _buildDetailRow(context, 'Data', formattedDate),
+
+                          SizedBox(height: 20),
                           Divider(),
                           SizedBox(height: 20),
 
-                          _buildDetailRow(
-                            'Tip',
-                            isExpense ? 'Cheltuială' : 'Venit',
+                          // F. Total Footer
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                'Total',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                              Text(
+                                '${settings.currencySymbol}${amount.toStringAsFixed(2)}',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
                           ),
-                          _buildDetailRow('Status', 'Finalizat'),
-                          _buildDetailRow('Data', formattedDate),
-                          _buildDetailRow('Ora', formattedTime),
-                          _buildDetailRow('Adăugat de', isMe ? 'Tu' : 'Soția'),
+                          SizedBox(height: 30),
                         ],
                       ),
                     ),
@@ -391,7 +477,13 @@ class TransactionDetailsPage extends StatelessWidget {
     );
   }
 
-  Widget _buildDetailRow(String label, String value) {
+  Widget _buildDetailRow(
+    BuildContext context,
+    String label,
+    String value, {
+    Color? textColor,
+    bool isBold = false,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12.0),
       child: Row(
@@ -400,7 +492,11 @@ class TransactionDetailsPage extends StatelessWidget {
           Text(label, style: TextStyle(fontSize: 16, color: Colors.grey[600])),
           Text(
             value,
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: isBold ? FontWeight.bold : FontWeight.w500,
+              color: textColor ?? Theme.of(context).textTheme.bodyLarge?.color,
+            ),
           ),
         ],
       ),

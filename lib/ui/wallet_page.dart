@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:expense_tracker_nou/services/firestore_service.dart';
-import 'package:expense_tracker_nou/theme/theme.dart'; // Importăm tema pentru culori
+import 'package:expense_tracker_nou/theme/theme.dart'; // Importăm tema
 import 'package:expense_tracker_nou/ui/add_account_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -16,7 +16,6 @@ class WalletPage extends StatefulWidget {
 class _WalletPageState extends State<WalletPage> {
   final FirestoreService _firestoreService = FirestoreService();
 
-  // Funcție pentru a deschide fereastra (Adăugare sau Editare)
   void _showAccountSheet({DocumentSnapshot? account}) {
     showModalBottomSheet(
       context: context,
@@ -32,19 +31,16 @@ class _WalletPageState extends State<WalletPage> {
     final settings = Provider.of<SettingsProvider>(context);
 
     return Scaffold(
-      // Folosim Stack pentru a suprapune fundalul și conținutul
       body: Stack(
         children: [
           // --- 1. FUNDALUL VERDE (VALUL) ---
           ClipPath(
             clipper: _TopCurveClipper(),
             child: Container(
-              height: 300, // Înălțimea valului
+              height: 300,
               decoration: BoxDecoration(
                 image: DecorationImage(
-                  image: AssetImage(
-                    'assets/images/fundal.png',
-                  ), // Imaginea ta texturată
+                  image: AssetImage('assets/images/fundal.png'),
                   fit: BoxFit.cover,
                 ),
               ),
@@ -55,22 +51,21 @@ class _WalletPageState extends State<WalletPage> {
           SafeArea(
             child: Column(
               children: [
-                // --- A. ANTETUL (Titlu) ---
+                // --- A. ANTETUL ---
                 Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 20.0,
                     vertical: 10.0,
                   ),
                   child: Row(
-                    mainAxisAlignment:
-                        MainAxisAlignment.center, // Centrăm titlul
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
                         'Portofel & Conturi',
                         style: TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white, // Text alb pe fundal verde
+                          color: Colors.white,
                         ),
                       ),
                     ],
@@ -85,7 +80,7 @@ class _WalletPageState extends State<WalletPage> {
                   padding: const EdgeInsets.only(
                     left: 20,
                     right: 20,
-                    top: 50,
+                    top: 40,
                     bottom: 10,
                   ),
                   child: Align(
@@ -95,6 +90,7 @@ class _WalletPageState extends State<WalletPage> {
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
+                        // Culoarea textului se adaptează automat la temă
                       ),
                     ),
                   ),
@@ -128,7 +124,8 @@ class _WalletPageState extends State<WalletPage> {
                           var accountDoc = accounts[index];
                           var data = accountDoc.data() as Map<String, dynamic>;
 
-                          return _buildMinimalistCard(accountDoc, data);
+                          // Folosim noul design "discret"
+                          return _buildAccountListTile(accountDoc, data);
                         },
                       );
                     },
@@ -140,18 +137,20 @@ class _WalletPageState extends State<WalletPage> {
         ],
       ),
 
-      // Butonul de adăugare cont (rămâne aici)
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showAccountSheet(),
         child: const Icon(Icons.add),
-        backgroundColor: accentGreen, // Ne asigurăm că e verde
+        backgroundColor: accentGreen,
         foregroundColor: Colors.white,
       ),
     );
   }
 
-  // --- CARD MINIMALIST (CONT) ---
-  Widget _buildMinimalistCard(DocumentSnapshot doc, Map<String, dynamic> data) {
+  // --- CARD STILIZAT CA ÎN STATISTICI (DISCRET) ---
+  Widget _buildAccountListTile(
+    DocumentSnapshot doc,
+    Map<String, dynamic> data,
+  ) {
     String name = data['name'] ?? 'N/A';
     double balance = (data['balance'] ?? 0.0).toDouble();
     String currency = data['currency'] ?? 'RON';
@@ -161,99 +160,85 @@ class _WalletPageState extends State<WalletPage> {
     if (currency == 'EUR') symbol = '€';
     if (currency == 'GBP') symbol = '£';
 
-    return Container(
-      margin: EdgeInsets.only(bottom: 16),
-      padding: EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 15,
-            offset: Offset(0, 5),
+    return Card(
+      elevation: 2, // Umbră mică, discretă
+      margin: EdgeInsets.only(bottom: 12), // Spațiu între ele
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+      // 'Card' preia automat culoarea corectă pentru Light/Dark mode
+      child: ListTile(
+        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+
+        // Iconița din stânga (Cerc verde cu portofel)
+        leading: CircleAvatar(
+          radius: 24,
+          backgroundColor: Theme.of(
+            context,
+          ).colorScheme.primary.withOpacity(0.1),
+          child: Icon(
+            Icons.account_balance_wallet,
+            color: Theme.of(context).colorScheme.primary, // Verdele nostru
+            size: 24,
           ),
-        ],
-        border: Border.all(color: Colors.grey.withOpacity(0.1)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).primaryColor.withOpacity(0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.account_balance_wallet,
-                      color: Theme.of(context).primaryColor,
-                      size: 20,
-                    ),
-                  ),
-                  SizedBox(width: 12),
-                  Text(
-                    name,
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                  ),
-                ],
+        ),
+
+        // Numele Contului
+        title: Text(
+          name,
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
+
+        // Balanța și Butonul Editare în dreapta
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min, // Ocupă spațiu minim
+          children: [
+            // Suma
+            Text(
+              '$symbol${balance.toStringAsFixed(2)}',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.primary, // Verde
               ),
-              IconButton(
-                icon: Icon(Icons.edit, size: 20, color: Colors.grey),
-                onPressed: () => _showAccountSheet(account: doc),
-              ),
-            ],
-          ),
-          SizedBox(height: 20),
-          Text(
-            'Balanță Disponibilă',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[600],
-              letterSpacing: 1,
             ),
-          ),
-          SizedBox(height: 4),
-          Text(
-            '$symbol${balance.toStringAsFixed(2)}',
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).textTheme.bodyLarge?.color,
+            SizedBox(width: 10),
+            // Butonul Editare (Mic și gri)
+            IconButton(
+              icon: Icon(Icons.edit, size: 20, color: Colors.grey),
+              onPressed: () => _showAccountSheet(account: doc),
+              padding: EdgeInsets.zero,
+              constraints: BoxConstraints(), // Scoate padding-ul default
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  // --- CARDUL CU BALANȚA TOTALĂ (STILIZAT) ---
+  // --- CARDUL CU BALANȚA TOTALĂ ---
   Widget _buildTotalBalanceCard(SettingsProvider settings) {
     return Card(
       margin: EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
-      elevation: 5, // Umbră mai pronunțată
-      color: Colors.white, // Card alb pentru contrast cu fundalul verde
+      elevation: 5,
+      color: accentGreen.withOpacity(0.8), // Rămâne alb pe fundalul verde
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       child: Padding(
-        padding: const EdgeInsets.all(24.0),
+        padding: const EdgeInsets.all(60.0),
         child: Center(
           child: Column(
             children: [
               Text(
                 'Balanță Totală Portofele',
-                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                style: TextStyle(
+                  fontSize: 16,
+                  color: const Color.fromARGB(255, 209, 208, 208),
+                ),
               ),
               SizedBox(height: 10),
               StreamBuilder<QuerySnapshot>(
                 stream: _firestoreService.getAccountsStream(),
                 builder: (context, snapshot) {
                   if (!snapshot.hasData) {
-                    return CircularProgressIndicator();
+                    return CircularProgressIndicator(color: accentGreen);
                   }
 
                   double totalBalance = 0;
@@ -267,7 +252,7 @@ class _WalletPageState extends State<WalletPage> {
                     style: TextStyle(
                       fontSize: 36,
                       fontWeight: FontWeight.bold,
-                      color: accentGreen, // Folosim verdele nostru pentru sumă
+                      color: Colors.white,
                     ),
                   );
                 },
@@ -280,7 +265,6 @@ class _WalletPageState extends State<WalletPage> {
   }
 }
 
-// --- CLASA CLIPPER (ACEEAȘI CA ÎN CELELALTE FIȘIERE) ---
 class _TopCurveClipper extends CustomClipper<Path> {
   @override
   Path getClip(Size size) {
