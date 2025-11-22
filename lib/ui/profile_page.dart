@@ -5,7 +5,6 @@ import 'package:expense_tracker_nou/ui/settings_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart'; // Pentru DocumentSnapshot
 import 'package:expense_tracker_nou/services/firestore_service.dart'; // Pentru serviciu
 import 'package:flutter/services.dart'; // Pentru copiere în clipboard
-import 'package:expense_tracker_nou/ui/settings_page.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});

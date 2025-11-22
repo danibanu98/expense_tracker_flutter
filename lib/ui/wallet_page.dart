@@ -2,8 +2,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:expense_tracker_nou/services/firestore_service.dart';
 import 'package:expense_tracker_nou/ui/add_account_sheet.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:expense_tracker_nou/providers/settings_provider.dart';
 
 class WalletPage extends StatefulWidget {
   const WalletPage({super.key});
