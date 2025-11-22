@@ -191,7 +191,11 @@ class FirestoreService {
   }
 
   // --- FUNCȚIA DE ADĂUGARE CONT (OK) ---
-  Future<void> addAccount(String name, double startingBalance) async {
+  Future<void> addAccount(
+    String name,
+    double startingBalance,
+    String currency,
+  ) async {
     final String? userId = FirebaseAuth.instance.currentUser?.uid;
     final userDoc = await users.doc(userId).get();
     final String householdId = userDoc.get('householdId');
@@ -199,8 +203,23 @@ class FirestoreService {
     await accounts.add({
       'name': name,
       'balance': startingBalance,
+      'currency': currency,
       'uid': userId,
       'householdId': householdId,
+    });
+  }
+
+  // --- NOU: Funcția de EDITARE CONT ---
+  Future<void> updateAccount(
+    String docId,
+    String name,
+    double balance,
+    String currency,
+  ) async {
+    await accounts.doc(docId).update({
+      'name': name,
+      'balance': balance,
+      'currency': currency,
     });
   }
 

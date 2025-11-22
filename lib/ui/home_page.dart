@@ -56,10 +56,29 @@ class _HomePageState extends State<HomePage> {
     String description = (data['description'] ?? '').toLowerCase();
     String category = data['category'] ?? 'Altul';
 
+    // Logica pentru Brand-uri
     if (description.contains('netflix')) {
       return CircleAvatar(
         backgroundColor: Colors.white,
         child: Image.asset('assets/images/netflix.png', width: 28, height: 28),
+      );
+    }
+    if (description.contains('asigurare ale')) {
+      return CircleAvatar(
+        backgroundColor: Colors.white,
+        child: Image.asset('assets/images/nn.png', width: 28, height: 28),
+      );
+    }
+    if (description.contains('youtube')) {
+      return CircleAvatar(
+        backgroundColor: Colors.white,
+        child: Image.asset('assets/images/youtube.png', width: 28, height: 28),
+      );
+    }
+    if (description.contains('rata bt')) {
+      return CircleAvatar(
+        backgroundColor: Colors.white,
+        child: Image.asset('assets/images/bt.png', width: 28, height: 28),
       );
     }
     if (description.contains('orange')) {
@@ -100,12 +119,6 @@ class _HomePageState extends State<HomePage> {
           width: 28,
           height: 28,
         ),
-      );
-    }
-    if (description.contains('asigurare ale')) {
-      return CircleAvatar(
-        backgroundColor: Colors.white,
-        child: Image.asset('assets/images/nn.png', width: 28, height: 28),
       );
     }
 

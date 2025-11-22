@@ -81,6 +81,7 @@ class _MainScreenState extends State<MainScreen> {
               width: 64.0,
               height: 64.0,
               child: FloatingActionButton(
+                heroTag: 'add_transaction_fab',
                 onPressed: _showAddTransactionSheet,
                 child: Icon(Icons.add, color: Colors.white, size: 32.0),
               ),

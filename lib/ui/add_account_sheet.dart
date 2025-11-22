@@ -1,20 +1,36 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:expense_tracker_nou/services/firestore_service.dart';
 import 'package:flutter/material.dart';
 
 class AddAccountSheet extends StatefulWidget {
-  const AddAccountSheet({super.key});
+  // Dacă primim acest parametru, suntem în modul EDITARE
+  final DocumentSnapshot? accountToEdit;
+
+  const AddAccountSheet({super.key, this.accountToEdit});
 
   @override
   State<AddAccountSheet> createState() => _AddAccountSheetState();
 }
 
 class _AddAccountSheetState extends State<AddAccountSheet> {
-  // Controllere pentru a citi textul din câmpuri
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _balanceController = TextEditingController();
-
-  // Instanța serviciului
   final FirestoreService _firestoreService = FirestoreService();
+
+  String _selectedCurrency = 'RON'; // Moneda implicită
+  final List<String> _currencies = ['RON', 'EUR', 'USD', 'GBP'];
+
+  @override
+  void initState() {
+    super.initState();
+    // Dacă edităm, completăm câmpurile cu datele existente
+    if (widget.accountToEdit != null) {
+      final data = widget.accountToEdit!.data() as Map<String, dynamic>;
+      _nameController.text = data['name'] ?? '';
+      _balanceController.text = (data['balance'] ?? 0.0).toString();
+      _selectedCurrency = data['currency'] ?? 'RON';
+    }
+  }
 
   @override
   void dispose() {
@@ -23,37 +39,42 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
     super.dispose();
   }
 
-  // Funcția de salvare
   void _saveAccount() async {
-    // 1. Extrage datele
     final name = _nameController.text.trim();
     final balance = double.tryParse(_balanceController.text.trim()) ?? 0.0;
 
-    // 2. Verifică dacă datele sunt valide
     if (name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Numele contului este obligatoriu.')),
       );
-      return; // Oprește funcția
+      return;
     }
 
-    // 3. Apelăm FirestoreService pentru a salva datele
     try {
-      await _firestoreService.addAccount(name, balance);
+      if (widget.accountToEdit == null) {
+        // MOD CREARE
+        await _firestoreService.addAccount(name, balance, _selectedCurrency);
+      } else {
+        // MOD EDITARE (Update)
+        await _firestoreService.updateAccount(
+          widget.accountToEdit!.id,
+          name,
+          balance,
+          _selectedCurrency,
+        );
+      }
 
-      if (mounted) Navigator.of(context).pop(); // Închide fereastra
+      if (mounted) Navigator.of(context).pop();
     } catch (e) {
-      print('Eroare la salvarea contului: $e');
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Eroare la salvare: $e')));
+      print('Eroare: $e');
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final isEditing = widget.accountToEdit != null;
+
     return Padding(
-      // Padding care ține cont de tastatură
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
         left: 24,
@@ -61,19 +82,18 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
         top: 24,
       ),
       child: Column(
-        mainAxisSize: MainAxisSize.min, // Ocupă spațiu minim
+        mainAxisSize: MainAxisSize.min,
         children: [
           Text(
-            'Adaugă Cont Nou',
+            isEditing ? 'Editează Cont' : 'Adaugă Cont Nou',
             style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
           ),
           SizedBox(height: 20),
 
-          // --- Câmpul pentru Numele Contului ---
           TextField(
             controller: _nameController,
             decoration: InputDecoration(
-              labelText: 'Nume Cont (ex: Portofel Daniel, Card Soție)',
+              labelText: 'Nume Cont (ex: Revolut, Cash)',
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
@@ -81,32 +101,55 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
           ),
           SizedBox(height: 20),
 
-          // --- Câmpul pentru Balanța Inițială ---
-          TextField(
-            controller: _balanceController,
-            decoration: InputDecoration(
-              labelText: 'Balanță Inițială (Opțional)',
-              prefixIcon: Icon(Icons.attach_money),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
+          // Rând cu Suma și Moneda
+          Row(
+            children: [
+              Expanded(
+                flex: 2,
+                child: TextField(
+                  controller: _balanceController,
+                  decoration: InputDecoration(
+                    labelText: 'Balanță',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  keyboardType: TextInputType.numberWithOptions(decimal: true),
+                ),
               ),
-            ),
-            keyboardType: TextInputType.number,
+              SizedBox(width: 10),
+              Expanded(
+                flex: 1,
+                child: DropdownButtonFormField<String>(
+                  value: _selectedCurrency,
+                  items: _currencies
+                      .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                      .toList(),
+                  onChanged: (val) => setState(() => _selectedCurrency = val!),
+                  decoration: InputDecoration(
+                    labelText: 'Monedă',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
+
           SizedBox(height: 30),
 
-          // --- Butonul de Salvare ---
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
               onPressed: _saveAccount,
+              child: Text(isEditing ? 'Actualizează' : 'Salvează'),
               style: ElevatedButton.styleFrom(
                 padding: EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
-              ), // Apelează funcția de salvare
-              child: Text('Salvează Cont'),
+              ),
             ),
           ),
           SizedBox(height: 20),

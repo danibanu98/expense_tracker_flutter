@@ -81,6 +81,7 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           ),
           SizedBox(height: 10),
+
           DropdownButtonFormField<String>(
             initialValue: settings.currency,
             decoration: InputDecoration(

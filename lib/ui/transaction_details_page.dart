@@ -17,21 +17,32 @@ class TransactionDetailsPage extends StatelessWidget {
     required this.transactionId,
   });
 
-  // --- FUNCȚIE NOUĂ ADAPTATĂ PENTRU ICONIȚE MARI ---
+  // --- FUNCȚIE CORECTATĂ PENTRU ICONIȚE MARI ---
   Widget _buildBigTransactionIcon(Map<String, dynamic> data, bool isExpense) {
     String description = (data['description'] ?? '').toLowerCase();
     String category = data['category'] ?? 'Altul';
 
-    // Mărimea pentru pagina de detalii
+    // Mărimea mare pentru pagina de detalii
     double imageSize = 50;
 
-    // Logica Branduri
+    // Logica pentru Brand-uri (folosim imageSize = 50)
     if (description.contains('netflix')) {
       return CircleAvatar(
         radius: 40,
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.black, // Netflix are fundal negru de obicei
         child: Image.asset(
           'assets/images/netflix.png',
+          width: imageSize,
+          height: imageSize,
+        ),
+      );
+    }
+    if (description.contains('asigurare ale')) {
+      return CircleAvatar(
+        radius: 40,
+        backgroundColor: Colors.black, // Netflix are fundal negru de obicei
+        child: Image.asset(
+          'assets/images/nn.png',
           width: imageSize,
           height: imageSize,
         ),
@@ -48,12 +59,12 @@ class TransactionDetailsPage extends StatelessWidget {
         ),
       );
     }
-    if (description.contains('upwork')) {
+    if (description.contains('rata bt')) {
       return CircleAvatar(
         radius: 40,
-        backgroundColor: Colors.green[50],
+        backgroundColor: Colors.white,
         child: Image.asset(
-          'assets/images/upwork.png',
+          'assets/images/bt.png',
           width: imageSize,
           height: imageSize,
         ),
@@ -125,17 +136,28 @@ class TransactionDetailsPage extends StatelessWidget {
         ),
       );
     }
+    if (description.contains('upwork')) {
+      return CircleAvatar(
+        radius: 40,
+        backgroundColor: Colors.green[50],
+        child: Image.asset(
+          'assets/images/upwork.png',
+          width: imageSize,
+          height: imageSize,
+        ),
+      );
+    }
 
-    // Logica Generic
+    // Logica Generic (dacă nu e brand)
     return CircleAvatar(
       radius: 40,
       backgroundColor: isExpense
           ? Colors.red.withOpacity(0.1)
-          : Colors.green.withOpacity(0.1),
+          : const Color(0xff2f7e79).withOpacity(0.1),
       child: Icon(
         _getIconForCategory(category),
-        size: 40,
-        color: isExpense ? Colors.red[400] : Colors.green[400],
+        size: 40, // Iconiță mare
+        color: isExpense ? Colors.red[400] : const Color(0xff2f7e79),
       ),
     );
   }
@@ -284,9 +306,9 @@ class TransactionDetailsPage extends StatelessWidget {
                       padding: EdgeInsets.all(24),
                       child: Column(
                         children: [
-                          // --- AICI FOLOSIM NOUA FUNCȚIE PENTRU ICONIȚA MARE ---
+                          // --- APELĂM FUNCȚIA CORECTĂ ---
                           _buildBigTransactionIcon(data, isExpense),
-                          // ----------------------------------------------------
+                          // ------------------------------
                           SizedBox(height: 16),
 
                           Text(

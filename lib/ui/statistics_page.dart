@@ -341,16 +341,22 @@ class _StatisticsPageState extends State<StatisticsPage> {
         child: Image.asset('assets/images/netflix.png', width: 28, height: 28),
       );
     }
+    if (description.contains('asigurare ale')) {
+      return CircleAvatar(
+        backgroundColor: Colors.white,
+        child: Image.asset('assets/images/nn.png', width: 28, height: 28),
+      );
+    }
     if (description.contains('youtube')) {
       return CircleAvatar(
         backgroundColor: Colors.white,
         child: Image.asset('assets/images/youtube.png', width: 28, height: 28),
       );
     }
-    if (description.contains('upwork')) {
+    if (description.contains('rata bt')) {
       return CircleAvatar(
-        backgroundColor: Colors.green[50],
-        child: Image.asset('assets/images/upwork.png', width: 28, height: 28),
+        backgroundColor: Colors.white,
+        child: Image.asset('assets/images/bt.png', width: 28, height: 28),
       );
     }
     if (description.contains('orange')) {

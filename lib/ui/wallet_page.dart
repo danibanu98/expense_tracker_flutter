@@ -4,7 +4,6 @@ import 'package:expense_tracker_nou/ui/add_account_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:expense_tracker_nou/providers/settings_provider.dart';
-import 'package:expense_tracker_nou/theme/theme.dart';
 
 class WalletPage extends StatefulWidget {
   const WalletPage({super.key});
@@ -14,205 +13,145 @@ class WalletPage extends StatefulWidget {
 }
 
 class _WalletPageState extends State<WalletPage> {
-  // 1. Adaugă serviciul
   final FirestoreService _firestoreService = FirestoreService();
 
-  // 2. Funcția de afișare a ferestrei de adăugare (o vom crea imediat)
-  void _showAddAccountSheet() {
+  // Funcție pentru a deschide fereastra (Adăugare sau Editare)
+  void _showAccountSheet({DocumentSnapshot? account}) {
     showModalBottomSheet(
       context: context,
-      isScrollControlled: true, // Permite ferestrei să fie mai înaltă
+      isScrollControlled: true,
       builder: (context) {
-        return AddAccountSheet();
+        // Dacă trimitem 'account', suntem în mod Editare
+        return AddAccountSheet(accountToEdit: account);
       },
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final settings = Provider.of<SettingsProvider>(context);
+    // Notă: Nu mai folosim settings.currencySymbol aici pentru conturi,
+    // ci moneda specifică fiecărui cont!
+
     return Scaffold(
-      appBar: AppBar(title: Text('Portofel & Conturi')),
+      appBar: AppBar(title: Text('Portofel')),
 
-      // --- ÎNCEPE MODIFICAREA ---
-      body: Column(
-        children: [
-          // Partea 1: Cardul cu Balanța Totală
-          _buildTotalBalanceCard(settings), // O funcție nouă
-          // Partea 2: Lista de conturi (într-un 'Expanded')
-          Expanded(
-            child: StreamBuilder<QuerySnapshot>(
-              stream: _firestoreService.getAccountsStream(),
-              builder: (context, snapshot) {
-                // ... (TOT CODUL TĂU 'StreamBuilder' DE DINAINTE ...
-                // ... DE LA 'if (snapshot.connectionState...' ...
+      body: StreamBuilder<QuerySnapshot>(
+        stream: _firestoreService.getAccountsStream(),
+        builder: (context, snapshot) {
+          if (snapshot.hasError)
+            return Center(child: Text('Eroare: ${snapshot.error}'));
+          if (!snapshot.hasData)
+            return Center(child: CircularProgressIndicator());
 
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return Center(child: CircularProgressIndicator());
-                }
-                if (snapshot.hasError) {
-                  return Center(
-                    child: Text('A apărut o eroare: ${snapshot.error}'),
-                  );
-                }
-                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return Center(child: Text('Nici un cont adăugat'));
-                }
+          var accounts = snapshot.data!.docs;
 
-                var accounts = snapshot.data!.docs;
+          if (accounts.isEmpty) {
+            return Center(child: Text('Niciun cont. Apasă + pentru a adăuga.'));
+          }
 
-                return ListView.builder(
-                  padding: EdgeInsets.all(16), // Am mărit padding-ul
-                  itemCount: accounts.length,
-                  itemBuilder: (context, index) {
-                    var account = accounts[index];
-                    var data = account.data() as Map<String, dynamic>;
+          return ListView.builder(
+            padding: EdgeInsets.all(16),
+            itemCount: accounts.length,
+            itemBuilder: (context, index) {
+              var accountDoc = accounts[index];
+              var data = accountDoc.data() as Map<String, dynamic>;
 
-                    // Apelăm noua funcție helper
-                    return _buildAccountCard(
-                      data: data,
-                      settings: settings,
-                      // Vom adăuga o logică pentru a alege culoarea/iconița mai târziu
-                      icon: Icons.account_balance_wallet,
-                      color: accentGreen, // Culoarea noastră verde
-                    );
-                  },
-                );
-                // --- Sfârșitul codului vechi 'StreamBuilder' ---
-              },
-            ),
-          ),
-        ],
+              return _buildMinimalistCard(accountDoc, data);
+            },
+          );
+        },
       ),
 
-      // 4. Adăugăm un buton `+`
       floatingActionButton: FloatingActionButton(
-        onPressed: _showAddAccountSheet,
-        tooltip: 'Adaugă Cont',
+        onPressed: () => _showAccountSheet(), // Mod Adăugare (fără parametri)
         child: const Icon(Icons.add),
       ),
     );
   }
 
-  // --- FUNCȚIE NOUĂ PENTRU CARDUL CU BALANȚA TOTALĂ ---
-  Widget _buildTotalBalanceCard(SettingsProvider settings) {
-    return Card(
-      margin: EdgeInsets.all(16.0),
-      elevation: 5,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      child: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Center(
-          child: Column(
-            children: [
-              Text(
-                'Balanță Totală Conturi',
-                style: TextStyle(fontSize: 18, color: Colors.grey[400]),
-              ),
-              SizedBox(height: 10),
-
-              // Ascultă CONTURILE pentru Balanța Totală
-              StreamBuilder<QuerySnapshot>(
-                stream: _firestoreService.getAccountsStream(),
-                builder: (context, snapshot) {
-                  if (!snapshot.hasData) {
-                    return CircularProgressIndicator();
-                  }
-
-                  double totalBalance = 0;
-                  for (var doc in snapshot.data!.docs) {
-                    totalBalance +=
-                        (doc.data() as Map<String, dynamic>)['balance'] ?? 0.0;
-                  }
-
-                  return Text(
-                    '${settings.currencySymbol}${totalBalance.toStringAsFixed(2)}',
-                    style: TextStyle(
-                      fontSize: 36,
-                      fontWeight: FontWeight.bold,
-                      color: totalBalance >= 0
-                          ? const Color(0xff2f7e79)
-                          : Colors.red[400],
-                    ),
-                  );
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  // --- FUNCȚIE NOUĂ PENTRU CARDUL DE CONT ---
-  Widget _buildAccountCard({
-    required Map<String, dynamic> data,
-    required SettingsProvider settings,
-    required IconData icon,
-    required Color color,
-  }) {
+  // --- CARD MINIMALIST (DESIGN NOU) ---
+  Widget _buildMinimalistCard(DocumentSnapshot doc, Map<String, dynamic> data) {
     String name = data['name'] ?? 'N/A';
     double balance = (data['balance'] ?? 0.0).toDouble();
+    String currency = data['currency'] ?? 'RON'; // Moneda contului
 
-    return Card(
-      elevation: 5,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      margin: EdgeInsets.symmetric(vertical: 10),
-      child: Container(
-        // Containerul pentru a aplica gradientul și colțurile
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          gradient: LinearGradient(
-            colors: [color.withOpacity(0.8), color],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+    // Alegem un simbol pe baza monedei salvate
+    String symbol = '\$';
+    if (currency == 'RON') symbol = 'RON ';
+    if (currency == 'EUR') symbol = '€';
+    if (currency == 'GBP') symbol = '£';
+
+    return Container(
+      margin: EdgeInsets.only(bottom: 16),
+      padding: EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface, // Alb pe light mode
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 15,
+            offset: Offset(0, 5),
           ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        ],
+        // Un mic border subtil
+        border: Border.all(color: Colors.grey.withOpacity(0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Rândul de sus (Iconiță și Nume)
+              // Iconiță și Nume
               Row(
                 children: [
-                  Icon(icon, size: 30, color: Colors.white),
-                  SizedBox(width: 15),
+                  Container(
+                    padding: EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).primaryColor.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.account_balance_wallet,
+                      color: Theme.of(context).primaryColor,
+                      size: 20,
+                    ),
+                  ),
+                  SizedBox(width: 12),
                   Text(
                     name,
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                   ),
                 ],
               ),
-              SizedBox(height: 20),
-
-              // Textul "Balanță"
-              Text(
-                'BALANȚĂ',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.white.withOpacity(0.7),
-                  letterSpacing: 1.1,
-                ),
-              ),
-              SizedBox(height: 5),
-
-              // Suma (Balanța)
-              Text(
-                '${settings.currencySymbol}${balance.toStringAsFixed(2)}',
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
+              // Butonul de Editare (Creion)
+              IconButton(
+                icon: Icon(Icons.edit, size: 20, color: Colors.grey),
+                onPressed: () =>
+                    _showAccountSheet(account: doc), // Deschide editare
               ),
             ],
           ),
-        ),
+          SizedBox(height: 20),
+          Text(
+            'Balanță Disponibilă',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey[600],
+              letterSpacing: 1,
+            ),
+          ),
+          SizedBox(height: 4),
+          Text(
+            '$symbol${balance.toStringAsFixed(2)}', // Folosește simbolul contului
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).textTheme.bodyLarge?.color,
+            ),
+          ),
+        ],
       ),
     );
   }
