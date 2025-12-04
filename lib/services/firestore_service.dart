@@ -248,4 +248,26 @@ class FirestoreService {
         .get();
     return querySnapshot.docs;
   }
+
+  // --- FUNCȚIE NOUĂ: ȘTERGE CONT + TRANZACȚIILE LUI ---
+  Future<void> deleteAccount(String accountId) async {
+    // 1. Găsește toate tranzacțiile legate de acest cont
+    final transactionsQuery = await expenses
+        .where('accountId', isEqualTo: accountId)
+        .get();
+
+    // 2. Pornește un Batch (grup de operațiuni)
+    WriteBatch batch = FirebaseFirestore.instance.batch();
+
+    // 3. Adaugă ștergerea fiecărei tranzacții în batch
+    for (var doc in transactionsQuery.docs) {
+      batch.delete(doc.reference);
+    }
+
+    // 4. Adaugă ștergerea contului în batch
+    batch.delete(accounts.doc(accountId));
+
+    // 5. Execută totul deodată
+    await batch.commit();
+  }
 }
