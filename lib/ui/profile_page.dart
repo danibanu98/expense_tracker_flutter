@@ -15,11 +15,11 @@ class ProfilePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final FirestoreService _firestoreService = FirestoreService();
+    final FirestoreService firestoreService = FirestoreService();
     final user = FirebaseAuth.instance.currentUser;
 
     return StreamBuilder<DocumentSnapshot>(
-      stream: _firestoreService.users.doc(user?.uid).snapshots(),
+      stream: firestoreService.users.doc(user?.uid).snapshots(),
       builder: (context, userSnapshot) {
         // OPTIMISTIC UI: Loading doar dacă nu sunt date
         if (!userSnapshot.hasData) {
@@ -58,7 +58,7 @@ class ProfilePage extends StatelessWidget {
                   SizedBox(height: 30),
                   CircleAvatar(
                     radius: 50,
-                    backgroundColor: Colors.white.withOpacity(0.2),
+                    backgroundColor: Colors.white.withValues(alpha: 0.2),
                     child: Text(
                       initial,
                       style: TextStyle(
@@ -81,7 +81,7 @@ class ProfilePage extends StatelessWidget {
                     user?.email ?? '',
                     style: TextStyle(
                       fontSize: 16,
-                      color: Colors.white.withOpacity(0.7),
+                      color: Colors.white.withValues(alpha: 0.7),
                     ),
                   ),
                   SizedBox(height: 30),
@@ -100,7 +100,7 @@ class ProfilePage extends StatelessWidget {
                         children: [
                           _buildInviteCard(
                             context,
-                            _firestoreService,
+                            firestoreService,
                             householdId,
                           ),
                           SizedBox(height: 20),
@@ -179,7 +179,7 @@ class ProfilePage extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Gospodăria ta: $householdName',
+                  'Bine ai venit în $householdName',
                   style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                 ),
                 SizedBox(height: 10),
@@ -197,7 +197,7 @@ class ProfilePage extends StatelessWidget {
                         vertical: 8,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.1),
+                        color: Colors.black.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(

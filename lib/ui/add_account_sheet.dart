@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:expense_tracker_nou/services/firestore_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 
 class AddAccountSheet extends StatefulWidget {
   // Dacă primim acest parametru, suntem în modul EDITARE
@@ -66,7 +67,14 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
 
       if (mounted) Navigator.of(context).pop();
     } catch (e) {
-      print('Eroare: $e');
+      if (kDebugMode) {
+        debugPrint('Eroare: $e');
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Eroare: $e')),
+        );
+      }
     }
   }
 

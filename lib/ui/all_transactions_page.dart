@@ -144,8 +144,8 @@ class _AllTransactionsPageState extends State<AllTransactionsPage> {
 
     return CircleAvatar(
       backgroundColor: isExpense
-          ? Colors.red.withOpacity(0.1)
-          : const Color(0xff2f7e79).withOpacity(0.1),
+          ? Colors.red.withValues(alpha: 0.1)
+          : const Color(0xff2f7e79).withValues(alpha: 0.1),
       child: Icon(
         _getIconForCategory(category),
         color: isExpense ? Colors.red[300] : const Color(0xff2f7e79),
@@ -307,9 +307,9 @@ class _AllTransactionsPageState extends State<AllTransactionsPage> {
             vertical: 6,
           ), // Padding mai mic
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.2),
+            color: Colors.white.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(15), // Colțuri puțin mai mici
-            border: Border.all(color: Colors.white.withOpacity(0.5)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.5)),
           ),
           child: DropdownButtonHideUnderline(
             child: DropdownButton<int>(
@@ -457,7 +457,7 @@ class _Badge extends StatelessWidget {
         shape: BoxShape.circle,
         border: Border.all(color: borderColor, width: 2),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.2), blurRadius: 3),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 3),
         ],
       ),
       child: Icon(icon, size: size * 0.6, color: Colors.black),

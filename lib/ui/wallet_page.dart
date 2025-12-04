@@ -51,6 +51,7 @@ class _WalletPageState extends State<WalletPage> {
                     horizontal: 20.0,
                     vertical: 10.0,
                   ),
+                  
                   child: Center(
                     child: Text(
                       'Portofel & Conturi',
@@ -62,6 +63,7 @@ class _WalletPageState extends State<WalletPage> {
                     ),
                   ),
                 ),
+
                 _buildTotalBalanceCard(settings),
                 Padding(
                   padding: const EdgeInsets.only(
@@ -85,17 +87,19 @@ class _WalletPageState extends State<WalletPage> {
                   child: StreamBuilder<QuerySnapshot>(
                     stream: _firestoreService.getAccountsStream(),
                     builder: (context, snapshot) {
-                      if (snapshot.hasError)
+                      if (snapshot.hasError) {
                         return Center(child: Text('Eroare: ${snapshot.error}'));
+                      }
                       // OPTIMISTIC UI
                       if (snapshot.hasData) {
                         var accounts = snapshot.data!.docs;
-                        if (accounts.isEmpty)
+                        if (accounts.isEmpty) {
                           return Center(
                             child: Text(
                               'Niciun cont. Apasă + pentru a adăuga.',
                             ),
                           );
+                        }
                         return ListView.builder(
                           padding: EdgeInsets.symmetric(
                             horizontal: 16,
@@ -122,9 +126,9 @@ class _WalletPageState extends State<WalletPage> {
       floatingActionButton: FloatingActionButton(
         heroTag: 'fab_wallet',
         onPressed: () => _showAccountSheet(),
-        child: const Icon(Icons.add),
         backgroundColor: accentGreen,
         foregroundColor: Colors.white,
+        child: const Icon(Icons.add),
       ),
     );
   }
@@ -147,7 +151,7 @@ class _WalletPageState extends State<WalletPage> {
           radius: 24,
           backgroundColor: Theme.of(
             context,
-          ).colorScheme.primary.withOpacity(0.1),
+          ).colorScheme.primary.withValues(alpha: 0.1),
           child: Icon(
             Icons.account_balance_wallet,
             color: Theme.of(context).colorScheme.primary,
@@ -196,7 +200,7 @@ class _WalletPageState extends State<WalletPage> {
     return Card(
       margin: EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
       elevation: 0,
-      color: accentGreen.withOpacity(0.4),
+      color: accentGreen.withValues(alpha: 0.4),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       child: Padding(
         padding: const EdgeInsets.all(24.0),
@@ -207,7 +211,7 @@ class _WalletPageState extends State<WalletPage> {
                 'Balanță Totală Portofele',
                 style: TextStyle(
                   fontSize: 16,
-                  color: Colors.white.withOpacity(0.8),
+                  color: Colors.white.withValues(alpha: 0.8),
                 ),
               ),
               SizedBox(height: 10),
@@ -217,10 +221,11 @@ class _WalletPageState extends State<WalletPage> {
                   // OPTIMISTIC UI
                   if (snapshot.hasData) {
                     double total = 0;
-                    for (var doc in snapshot.data!.docs)
+                    for (var doc in snapshot.data!.docs) {
                       total +=
                           (doc.data() as Map<String, dynamic>)['balance'] ??
                           0.0;
+                    }
                     return Text(
                       '${settings.currencySymbol}${total.toStringAsFixed(2)}',
                       style: TextStyle(

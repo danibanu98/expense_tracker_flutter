@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:random_string/random_string.dart';
 
 class FirestoreService {
   final CollectionReference expenses = FirebaseFirestore.instance.collection(
@@ -181,9 +182,52 @@ class FirestoreService {
     String name,
     String inviteCode,
   ) async {
-    // ... (Logica ta de creare user/household rămâne neschimbată, o poți lăsa cum era sau o pot re-scrie dacă vrei) ...
-    // Pentru simplitate, am scurtat aici, dar asigură-te că păstrezi logica completă din pașii anteriori dacă ai modificat-o
-    // Dacă vrei codul complet și pentru asta, spune-mi.
+    final String userId = userCredential.user?.uid ?? '';
+    if (userId.isEmpty) {
+      throw Exception('ID utilizator invalid');
+    }
+
+    String householdId;
+    String finalInviteCode;
+
+    // Dacă utilizatorul a furnizat un cod de invitație, încearcă să se alăture unui household existent
+    if (inviteCode.trim().isNotEmpty) {
+      // Caută household-ul cu acest cod de invitație
+      final householdQuery = await households
+          .where('inviteCode', isEqualTo: inviteCode.trim().toUpperCase())
+          .limit(1)
+          .get();
+
+      if (householdQuery.docs.isEmpty) {
+        throw Exception('Cod de invitație invalid!');
+      }
+
+      // Găsim household-ul existent
+      final householdDoc = householdQuery.docs.first;
+      householdId = householdDoc.id;
+      finalInviteCode = householdDoc.get('inviteCode') ?? inviteCode.trim().toUpperCase();
+    } else {
+      // Dacă nu există cod de invitație, creează un household nou
+      finalInviteCode = randomAlphaNumeric(6).toUpperCase(); // Generează cod de 6 caractere
+
+      final householdRef = households.doc();
+      householdId = householdRef.id;
+
+      await householdRef.set({
+        'name': 'Gospodăria lui $name',
+        'inviteCode': finalInviteCode,
+        'createdAt': Timestamp.now(),
+        'createdBy': userId,
+      });
+    }
+
+    // Creează documentul utilizatorului
+    await users.doc(userId).set({
+      'name': name,
+      'email': userCredential.user?.email ?? '',
+      'householdId': householdId,
+      'createdAt': Timestamp.now(),
+    });
   }
 
   // Helper simplu pentru creare user (dacă ai nevoie de el complet, e mai sus în istoric)

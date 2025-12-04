@@ -26,14 +26,16 @@ class _RegisterPageState extends State<RegisterPage> {
     // Verificăm dacă parolele se potrivesc
     if (_passwordController.text.trim() !=
         _confirmPasswordController.text.trim()) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Parolele nu se potrivesc!')));
-      return; // Oprim funcția dacă nu se potrivesc
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Parolele nu se potrivesc!')),
+      );
+      return;
     }
 
     try {
       // Arată un cerc de încărcare cât timp se creează contul
+      if (!mounted) return;
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -54,41 +56,28 @@ class _RegisterPageState extends State<RegisterPage> {
       );
 
       // Ascundem cercul de încărcare
+      if (!mounted) return;
       Navigator.of(context).pop();
 
       // Închidem pagina de register (ne întoarcem la Login sau AuthPage ne duce la Home)
       if (mounted) Navigator.of(context).pop();
     } on FirebaseAuthException catch (e) {
-      Navigator.of(context).pop(); // Ascundem loading-ul la eroare
-      // ... afișare eroare ...
-    }
-
-    // Încercăm să creăm contul
-    try {
-      // 1. Prinde datele utilizatorului nou creat
-      UserCredential userCredential = await FirebaseAuth.instance
-          .createUserWithEmailAndPassword(
-            email: _emailController.text.trim(),
-            password: _passwordController.text.trim(),
-          );
-
-      // --- PASUL NOU ȘI VITAL ---
-      // 2. Trimite datele pentru a crea documentul în Firestore
-      await _firestoreService.createUserDocument(
-        userCredential,
-        _nameController.text.trim(),
-        _inviteCodeController.text.trim(), // <-- PARAMETRU NOU
+      // Ascundem loading-ul la eroare
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      
+      // Afișăm eroarea
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message ?? 'A apărut o eroare la înregistrare')),
       );
-      // --- SFÂRȘIT PAS NOU ---
-
-      if (mounted) Navigator.of(context).pop();
-      // ... restul ...
-    } on FirebaseAuthException catch (e) {
-      // Arătăm erori (ex: email deja folosit, parolă prea slabă)
-      print('Eroare la înregistrare: ${e.message}');
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.message ?? 'A apărut o eroare')));
+    } catch (e) {
+      // Gestionăm alte tipuri de erori (ex: erori Firestore)
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Eroare: ${e.toString()}')),
+      );
     }
   }
 

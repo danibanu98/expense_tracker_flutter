@@ -409,9 +409,9 @@ class _StatisticsPageState extends State<StatisticsPage> {
     // Logica pentru Categorii Generice
     return CircleAvatar(
       backgroundColor: isExpense
-          ? Colors.red.withOpacity(0.1)
-          : Colors.green.withOpacity(
-              0.1,
+          ? Colors.red.withValues(alpha: 0.1)
+          : Colors.green.withValues(
+              alpha: 0.1,
             ), // Folosim green standard dacă accentGreen nu e disponibil ușor
       child: Icon(
         _getIconForCategory(category),
@@ -492,8 +492,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
               show: true,
               gradient: LinearGradient(
                 colors: [
-                  Theme.of(context).colorScheme.primary.withOpacity(0.3),
-                  Theme.of(context).colorScheme.primary.withOpacity(0.0),
+                  Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+                  Theme.of(context).colorScheme.primary.withValues(alpha: 0.0),
                 ],
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,

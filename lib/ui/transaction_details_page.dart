@@ -141,21 +141,13 @@ class TransactionDetailsPage extends StatelessWidget {
     return CircleAvatar(
       radius: 40,
       backgroundColor: isExpense
-          ? Colors.red.withOpacity(0.1)
-          : const Color(0xff2f7e79).withOpacity(0.1),
+          ? Colors.red.withValues(alpha: 0.1)
+          : const Color(0xff2f7e79).withValues(alpha: 0.1),
       child: Icon(
         _getIconForCategory(category),
         size: 40,
         color: isExpense ? Colors.red[400] : const Color(0xff2f7e79),
       ),
-    );
-  }
-
-  Widget _buildBrandAvatar(String assetPath, Color bgColor, double size) {
-    return CircleAvatar(
-      radius: 40,
-      backgroundColor: bgColor,
-      child: Image.asset(assetPath, width: size, height: size),
     );
   }
 
@@ -187,8 +179,6 @@ class TransactionDetailsPage extends StatelessWidget {
     final settings = Provider.of<SettingsProvider>(context);
     final FirestoreService firestoreService = FirestoreService();
 
-    String description = data['description'] ?? 'N/A';
-    String category = data['category'] ?? 'Altul';
     double amount = (data['amount'] ?? 0.0).toDouble();
     String type = data['type'] ?? 'expense';
     bool isExpense = type == 'expense';
@@ -336,8 +326,8 @@ class TransactionDetailsPage extends StatelessWidget {
                             ),
                             decoration: BoxDecoration(
                               color: isExpense
-                                  ? Colors.red.withOpacity(0.1)
-                                  : const Color(0xff2f7e79).withOpacity(0.1),
+                                  ? Colors.red.withValues(alpha: 0.1)
+                                  : const Color(0xff2f7e79).withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Text(

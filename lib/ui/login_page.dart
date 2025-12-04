@@ -28,10 +28,10 @@ class _LoginPageState extends State<LoginPage> {
       // schimbarea și ne va trimite la HomePage!
     } on FirebaseAuthException catch (e) {
       // 4. Dacă apare o eroare (ex: parolă greșită), arătăm o alertă
-      print('Eroare la login: ${e.message}');
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.message ?? 'A apărut o eroare')));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message ?? 'A apărut o eroare')),
+      );
     }
   }
 

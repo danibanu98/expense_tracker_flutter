@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:expense_tracker_nou/providers/settings_provider.dart';
 import 'package:expense_tracker_nou/services/firestore_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
@@ -76,7 +77,9 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
         _isLoadingAccounts = false;
       });
     } catch (e) {
-      print("Eroare la încărcarea conturilor: $e");
+      if (kDebugMode) {
+        debugPrint("Eroare la încărcarea conturilor: $e");
+      }
       setState(() {
         _isLoadingAccounts = false;
       });
@@ -145,10 +148,10 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
         if (mounted) Navigator.of(context).pop();
       }
     } catch (e) {
-      print('Eroare la salvare: $e');
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Eroare la salvare: $e')));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Eroare la salvare: $e')),
+      );
     }
   }
 
@@ -218,7 +221,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
+                            color: Colors.black.withValues(alpha: 0.05),
                             blurRadius: 10,
                             offset: Offset(0, 5),
                           ),

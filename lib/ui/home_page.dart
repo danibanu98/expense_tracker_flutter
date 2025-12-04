@@ -124,8 +124,8 @@ class _HomePageState extends State<HomePage> {
 
     return CircleAvatar(
       backgroundColor: isExpense
-          ? Colors.red.withOpacity(0.1)
-          : const Color(0xff2f7e79).withOpacity(0.1),
+          ? Colors.red.withValues(alpha: 0.1)
+          : const Color(0xff2f7e79).withValues(alpha: 0.1),
       child: Icon(
         _getIconForCategory(category),
         color: isExpense ? Colors.red[300] : const Color(0xff2f7e79),
@@ -186,7 +186,7 @@ class _HomePageState extends State<HomePage> {
                                 greeting,
                                 style: TextStyle(
                                   fontSize: 16,
-                                  color: Colors.white.withOpacity(0.8),
+                                  color: Colors.white.withValues(alpha: 0.8),
                                 ),
                               ),
                               Text(
@@ -375,7 +375,7 @@ class _HomePageState extends State<HomePage> {
     return Card(
       margin: EdgeInsets.all(16.0),
       elevation: 0,
-      color: const Color(0xff2f7e79).withOpacity(0.9),
+      color: const Color(0xff2f7e79).withValues(alpha: 0.9),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       child: Padding(
         padding: const EdgeInsets.all(20.0),
@@ -386,7 +386,7 @@ class _HomePageState extends State<HomePage> {
               'Suma Totală',
               style: TextStyle(
                 fontSize: 16,
-                color: Colors.white.withOpacity(0.8),
+                color: Colors.white.withValues(alpha: 0.8),
               ),
             ),
             SizedBox(height: 10),
@@ -414,7 +414,7 @@ class _HomePageState extends State<HomePage> {
               },
             ),
             SizedBox(height: 20),
-            Divider(color: Colors.white.withOpacity(0.3)),
+            Divider(color: Colors.white.withValues(alpha: 0.3)),
             SizedBox(height: 10),
             StreamBuilder<QuerySnapshot>(
               stream: _firestoreService.getExpensesStream(),
@@ -470,14 +470,14 @@ class _HomePageState extends State<HomePage> {
       children: [
         CircleAvatar(
           radius: 16,
-          backgroundColor: Colors.white.withOpacity(0.1),
+          backgroundColor: Colors.white.withValues(alpha: 0.1),
           child: Icon(icon, color: color, size: 30),
         ),
         SizedBox(width: 10),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, style: TextStyle(color: Colors.white.withOpacity(0.8))),
+            Text(label, style: TextStyle(color: Colors.white.withValues(alpha: 0.8))),
             Text(
               '$currencySymbol${amount.toStringAsFixed(2)}',
               style: TextStyle(
