@@ -161,8 +161,9 @@ class _AllTransactionsPageState extends State<AllTransactionsPage> {
       body: StreamBuilder<QuerySnapshot>(
         stream: _firestoreService.getExpensesStream(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData)
+          if (!snapshot.hasData) {
             return Center(child: CircularProgressIndicator());
+          }
 
           var monthlyDocs = _filterByMonth(snapshot.data!.docs);
           var categoryTotals = _calculateCategoryExpenses(monthlyDocs);

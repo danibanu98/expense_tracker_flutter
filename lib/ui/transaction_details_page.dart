@@ -255,8 +255,9 @@ class TransactionDetailsPage extends StatelessWidget {
                                   ),
                                 ),
                               );
-                              if (result == true && context.mounted)
+                              if (result == true && context.mounted) {
                                 Navigator.of(context).pop();
+                              }
                             },
                           ),
                           IconButton(

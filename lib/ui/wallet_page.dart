@@ -101,10 +101,12 @@ class _WalletPageState extends State<WalletPage> {
                   child: StreamBuilder<QuerySnapshot>(
                     stream: _firestoreService.getAccountsStream(),
                     builder: (context, snapshot) {
-                      if (snapshot.hasError)
+                      if (snapshot.hasError) {
                         return Center(child: Text('Eroare: ${snapshot.error}'));
-                      if (!snapshot.hasData)
+                      }
+                      if (!snapshot.hasData) {
                         return Center(child: CircularProgressIndicator());
+                      }
 
                       var accounts = snapshot.data!.docs;
 
@@ -139,9 +141,9 @@ class _WalletPageState extends State<WalletPage> {
 
       floatingActionButton: FloatingActionButton(
         onPressed: () => _showAccountSheet(),
-        child: const Icon(Icons.add),
         backgroundColor: accentGreen,
         foregroundColor: Colors.white,
+        child: const Icon(Icons.add),
       ),
     );
   }

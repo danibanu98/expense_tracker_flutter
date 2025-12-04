@@ -269,7 +269,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
 
                           // 1. Categoria
                           DropdownButtonFormField<String>(
-                            value: _selectedCategory,
+                            initialValue: _selectedCategory,
                             hint: Text('Selectează Categoria'),
                             decoration: InputDecoration(
                               labelText: 'Categorie',
@@ -332,14 +332,11 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                                 // <-- Îl face puțin transparent ca să arate dezactivat
                                 opacity: _isEditing ? 0.5 : 1.0,
                                 child: DropdownButtonFormField<String>(
-                                  value: _selectedAccountId,
+                                  initialValue: _selectedAccountId,
                                   hint: Text('Selectează Contul'),
                                   decoration: InputDecoration(
                                     labelText:
-                                        'Cont ' +
-                                        (_isEditing
-                                            ? '(Nu poate fi schimbat)'
-                                            : ''),
+                                        'Cont ${_isEditing ? '(Nu poate fi schimbat)' : ''}',
                                     border: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(12),
                                     ),
@@ -413,14 +410,14 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                             width: double.infinity,
                             child: ElevatedButton(
                               onPressed: _saveTransaction,
-                              child: Text(
-                                _isEditing ? 'Actualizează' : 'Salvează',
-                              ),
                               style: ElevatedButton.styleFrom(
                                 padding: EdgeInsets.symmetric(vertical: 16),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
+                              ),
+                              child: Text(
+                                _isEditing ? 'Actualizează' : 'Salvează',
                               ),
                             ),
                           ),

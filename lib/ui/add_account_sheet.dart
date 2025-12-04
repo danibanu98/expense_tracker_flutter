@@ -121,7 +121,7 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
               Expanded(
                 flex: 1,
                 child: DropdownButtonFormField<String>(
-                  value: _selectedCurrency,
+                  initialValue: _selectedCurrency,
                   items: _currencies
                       .map((c) => DropdownMenuItem(value: c, child: Text(c)))
                       .toList(),
@@ -143,13 +143,13 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
             width: double.infinity,
             child: ElevatedButton(
               onPressed: _saveAccount,
-              child: Text(isEditing ? 'Actualizează' : 'Salvează'),
               style: ElevatedButton.styleFrom(
                 padding: EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
+              child: Text(isEditing ? 'Actualizează' : 'Salvează'),
             ),
           ),
           SizedBox(height: 20),

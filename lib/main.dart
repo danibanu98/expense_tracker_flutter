@@ -30,7 +30,7 @@ void main() async {
 
       // Setează la 1.0 pentru a captura 100% din tranzacții pentru testare.
       // În producție, poți reduce numărul (ex: 0.1).
-      options.tracesSampleRate = 0.1;
+      options.tracesSampleRate = 1.0;
       options.debug = false;
     },
     // Funcția care pornește efectiv aplicația
