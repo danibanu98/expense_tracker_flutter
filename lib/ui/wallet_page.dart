@@ -182,7 +182,7 @@ class _WalletPageState extends State<WalletPage> {
             ),
             SizedBox(width: 5),
             IconButton(
-              icon: Icon(Icons.delete, size: 20, color: Colors.red[300]),
+              icon: Icon(Icons.delete, size: 20, color: const Color(0xff7b0828)),
               onPressed: () {
                 // Aici ar trebui să fie logica de ștergere (confirmare + deleteAccount din service)
                 // Poți adăuga dialogul de confirmare aici dacă vrei

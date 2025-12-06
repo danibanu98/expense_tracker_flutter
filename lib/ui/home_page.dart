@@ -425,7 +425,7 @@ class _HomePageState extends State<HomePage> {
                 );
               },
             ),
-            SizedBox(height: 20),
+            SizedBox(height: 5),
             Divider(color: Colors.white.withValues(alpha: 0.3)),
             SizedBox(height: 10),
             StreamBuilder<QuerySnapshot>(
@@ -456,7 +456,7 @@ class _HomePageState extends State<HomePage> {
                     ),
                     _buildIncomeExpenseRow(
                       icon: Icons.arrow_upward,
-                      color: const Color(0xff7b0828),
+                      color: const Color.fromARGB(255, 216, 0, 61),
                       label: 'Cheltuieli',
                       amount: totalExpenses,
                       currencySymbol: settings.currencySymbol,
