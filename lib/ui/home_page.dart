@@ -62,6 +62,22 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
+  // Funcție pentru a obține numele utilizatorului din Firestore
+  Future<String> _getUserName(String uid) async {
+    try {
+      DocumentSnapshot userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .get();
+      if (userDoc.exists) {
+        return userDoc.get('name') ?? 'Necunoscut';
+      }
+      return 'Necunoscut';
+    } catch (e) {
+      return 'Necunoscut';
+    }
+  }
+
   Widget _buildTransactionLeading(Map<String, dynamic> data, bool isExpense) {
     String description = (data['description'] ?? '').toLowerCase();
     String category = data['category'] ?? 'Altele';
@@ -309,10 +325,6 @@ class _HomePageState extends State<HomePage> {
                               String type = data['type'] ?? 'expense';
                               bool isExpense = type == 'expense';
                               String expenseOwnerUid = data['uid'] ?? '';
-                              String currentUserUid =
-                                  FirebaseAuth.instance.currentUser?.uid ?? '';
-                              bool isMyExpense =
-                                  expenseOwnerUid == currentUserUid;
 
                               return Dismissible(
                                 key: Key(expense.id),
@@ -353,8 +365,14 @@ class _HomePageState extends State<HomePage> {
                                     isExpense,
                                   ),
                                   title: Text(description),
-                                  subtitle: Text(
-                                    "${data['category'] ?? 'Fără categorie'} • ${isMyExpense ? 'Tu' : 'Soția'}",
+                                  subtitle: FutureBuilder<String>(
+                                    future: _getUserName(expenseOwnerUid),
+                                    builder: (context, nameSnapshot) {
+                                      String ownerName = nameSnapshot.data ?? '...';
+                                      return Text(
+                                        "${data['category'] ?? 'Fără categorie'} • $ownerName",
+                                      );
+                                    },
                                   ),
                                   trailing: Text(
                                     '${isExpense ? '-' : '+'}${settings.currencySymbol}${amount.toStringAsFixed(2)}',

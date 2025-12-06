@@ -24,6 +24,60 @@ class _WalletPageState extends State<WalletPage> {
     );
   }
 
+  void _showDeleteAccountDialog(DocumentSnapshot accountDoc) {
+    final accountData = accountDoc.data() as Map<String, dynamic>;
+    final accountName = accountData['name'] ?? 'acest cont';
+
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Șterge Cont'),
+        content: Text(
+          'Ești sigur că vrei să ștergi "$accountName"?\n\n'
+          'Această acțiune va șterge:\n'
+          '• Contul\n'
+          '• Toate tranzacțiile asociate\n\n'
+          'Această acțiune este ireversibilă și va actualiza automat balanțele.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text('Anulează'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.of(dialogContext).pop();
+              try {
+                await _firestoreService.deleteAccount(accountDoc.id);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Contul "$accountName" a fost șters'),
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Eroare la ștergere: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            child: Text(
+              'Șterge',
+              style: TextStyle(color: const Color(0xff7b0828)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final settings = Provider.of<SettingsProvider>(context);
@@ -183,10 +237,7 @@ class _WalletPageState extends State<WalletPage> {
             SizedBox(width: 5),
             IconButton(
               icon: Icon(Icons.delete, size: 20, color: const Color(0xff7b0828)),
-              onPressed: () {
-                // Aici ar trebui să fie logica de ștergere (confirmare + deleteAccount din service)
-                // Poți adăuga dialogul de confirmare aici dacă vrei
-              },
+              onPressed: () => _showDeleteAccountDialog(doc),
               padding: EdgeInsets.zero,
               constraints: BoxConstraints(),
             ),
