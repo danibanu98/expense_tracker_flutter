@@ -274,7 +274,7 @@ class _AllTransactionsPageState extends State<AllTransactionsPage> {
                             Text(
                               'Tranzacțiile Lunii',
                               style: TextStyle(
-                                fontSize: 18,
+                                fontSize: 20,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),

@@ -377,7 +377,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
         child: Image.asset('assets/images/digi.png', width: 28, height: 28),
       );
     }
-    if (description.contains('enel')) {
+    if (description.contains('curent ppc')) {
       return CircleAvatar(
         backgroundColor: Colors.white,
         child: Image.asset('assets/images/enel.png', width: 28, height: 28),
@@ -395,14 +395,16 @@ class _StatisticsPageState extends State<StatisticsPage> {
         child: Image.asset('assets/images/revolut.png', width: 28, height: 28),
       );
     }
+    if (description.contains('lidl')) {
+      return CircleAvatar(
+        backgroundColor: Colors.white,
+        child: Image.asset('assets/images/lidl.png', width: 28, height: 28),
+      );
+    }
     if (description.contains('starbucks')) {
       return CircleAvatar(
         backgroundColor: Colors.white,
-        child: Image.asset(
-          'assets/images/starbucks.png',
-          width: 28,
-          height: 28,
-        ),
+        child: Image.asset('assets/images/starbucks.png', width: 28, height: 28),
       );
     }
 
