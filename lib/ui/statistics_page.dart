@@ -338,7 +338,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
   // Am adăugat această funcție din HomePage
   Widget _buildTransactionLeading(Map<String, dynamic> data, bool isExpense) {
     String description = (data['description'] ?? '').toLowerCase();
-    String category = data['category'] ?? 'Altul';
+    String category = data['category'] ?? 'Altele';
 
     // Logica pentru Brand-uri
     if (description.contains('netflix')) {
@@ -440,6 +440,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
         return Icons.attach_money;
       case 'Salariu':
         return Icons.work;
+      case 'Bonus':
+        return Icons.card_giftcard;
       case 'Cadou':
         return Icons.cake;
       case 'Altele':

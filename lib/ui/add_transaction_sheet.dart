@@ -42,9 +42,9 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
     'Cheltuieli financiare',
     'Investiţii',
     'Cadou',
-    'Altul',
+    'Altele',
   ];
-  final List<String> _incomeCategories = ['Salariu', 'Bonus', 'Cadou', 'Investiţii', 'Altul'];
+  final List<String> _incomeCategories = ['Salariu', 'Bonus', 'Cadou', 'Investiţii', 'Altele'];
   String? _selectedCategory;
   DateTime _selectedDate = DateTime.now();
 

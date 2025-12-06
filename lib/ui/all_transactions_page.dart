@@ -50,7 +50,7 @@ class _AllTransactionsPageState extends State<AllTransactionsPage> {
     for (var doc in docs) {
       var data = doc.data() as Map<String, dynamic>;
       if (data['type'] == 'expense') {
-        String category = data['category'] ?? 'Altul';
+        String category = data['category'] ?? 'Altele';
         double amount = (data['amount'] ?? 0.0).toDouble();
         totals[category] = (totals[category] ?? 0) + amount;
       }
@@ -81,6 +81,10 @@ class _AllTransactionsPageState extends State<AllTransactionsPage> {
         return Icons.attach_money;
       case 'Salariu':
         return Icons.work;
+      case 'Bonus':
+        return Icons.card_giftcard;
+      case 'Cadou':
+        return Icons.cake;
       case 'Altele':
         return Icons.clear_all_rounded;
       default:

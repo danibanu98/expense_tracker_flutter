@@ -42,6 +42,8 @@ class _HomePageState extends State<HomePage> {
         return Icons.work;
       case 'Cadou':
         return Icons.cake;
+      case 'Bonus':
+        return Icons.card_giftcard;
       case 'Altele':
         return Icons.clear_all_rounded;
       default:
@@ -62,7 +64,7 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildTransactionLeading(Map<String, dynamic> data, bool isExpense) {
     String description = (data['description'] ?? '').toLowerCase();
-    String category = data['category'] ?? 'Altul';
+    String category = data['category'] ?? 'Altele';
 
     // Logica pentru Brand-uri
     if (description.contains('netflix')) {

@@ -35,7 +35,7 @@ class TransactionDetailsPage extends StatelessWidget {
   // --- FUNCȚIE PENTRU ICONIȚE MARI (BRANDURI) ---
   Widget _buildBigTransactionIcon(Map<String, dynamic> data, bool isExpense) {
     String description = (data['description'] ?? '').toLowerCase();
-    String category = data['category'] ?? 'Altul';
+    String category = data['category'] ?? 'Altele';
     double imageSize = 50;
 
     if (description.contains('netflix')) {
@@ -175,27 +175,36 @@ class TransactionDetailsPage extends StatelessWidget {
 
   IconData _getIconForCategory(String category) {
     switch (category) {
-      case 'Mâncare':
-        return Icons.fastfood;
-      case 'Transport':
-        return Icons.directions_car;
-      case 'Facturi':
-        return Icons.receipt_long;
-      case 'Timp Liber':
-        return Icons.sports_esports;
+      case 'Alimente & Băuturi':
+        return Icons.restaurant;
       case 'Cumpărături':
         return Icons.shopping_bag;
+      case 'Locuinţă':
+        return Icons.home;
+      case 'Transport':
+        return Icons.car_rental;
+      case 'Maşină':
+        return Icons.directions_car;
+      case 'Viaţă & Divertisment':
+        return Icons.sports_esports;
+      case 'Hardware PC':
+        return Icons.computer;
+      case 'Cheltuieli financiare':
+        return Icons.payments;
+      case 'Investiţii':
+        return Icons.attach_money;
       case 'Salariu':
         return Icons.work;
-      case 'Bonus':
-        return Icons.card_giftcard;
       case 'Cadou':
         return Icons.cake;
+      case 'Bonus':
+        return Icons.card_giftcard;
+      case 'Altele':
+        return Icons.clear_all_rounded;
       default:
         return Icons.money;
     }
   }
-
   @override
   Widget build(BuildContext context) {
     final settings = Provider.of<SettingsProvider>(context);
