@@ -315,8 +315,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
                               '${isExpense ? '-' : '+'}${settings.currencySymbol}${(data['amount'] ?? 0.0).toStringAsFixed(2)}',
                               style: TextStyle(
                                 color: isExpense
-                                    ? Colors.red[400]
-                                    : Colors.green[400],
+                                    ? const Color(0xff7b0828)
+                                    : const Color(0xff2f7e79),
                                 fontWeight: FontWeight.bold,
                                 fontSize: 16,
                               ),
@@ -409,10 +409,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
     // Logica pentru Categorii Generice
     return CircleAvatar(
       backgroundColor: isExpense
-          ? Colors.red.withValues(alpha: 0.1)
-          : Colors.green.withValues(
-              alpha: 0.1,
-            ), // Folosim green standard dacă accentGreen nu e disponibil ușor
+          ? const Color(0xff7b0828).withValues(alpha: 0.1)
+          : const Color(0xff2f7e79).withValues(alpha: 0.1), // Folosim green standard dacă accentGreen nu e disponibil ușor
       child: Icon(
         _getIconForCategory(category),
         color: isExpense ? Colors.red[300] : Colors.green[300],
@@ -422,22 +420,30 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
   IconData _getIconForCategory(String category) {
     switch (category) {
-      case 'Mâncare':
-        return Icons.fastfood;
-      case 'Transport':
-        return Icons.directions_car;
-      case 'Facturi':
-        return Icons.receipt_long;
-      case 'Timp Liber':
-        return Icons.sports_esports;
+      case 'Alimente & Băuturi':
+        return Icons.restaurant;
       case 'Cumpărături':
         return Icons.shopping_bag;
+      case 'Locuinţă':
+        return Icons.home;
+      case 'Transport':
+        return Icons.car_rental;
+      case 'Maşină':
+        return Icons.directions_car;
+      case 'Viaţă & Divertisment':
+        return Icons.sports_esports;
+      case 'Hardware PC':
+        return Icons.computer;
+      case 'Cheltuieli financiare':
+        return Icons.payments;
+      case 'Investiţii':
+        return Icons.attach_money;
       case 'Salariu':
         return Icons.work;
-      case 'Bonus':
-        return Icons.card_giftcard;
       case 'Cadou':
         return Icons.cake;
+      case 'Altele':
+        return Icons.clear_all_rounded;
       default:
         return Icons.money;
     }

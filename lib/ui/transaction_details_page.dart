@@ -60,6 +60,17 @@ class TransactionDetailsPage extends StatelessWidget {
         ),
       );
     }
+        if (description.contains('youtube')) {
+      return CircleAvatar(
+        radius: 40,
+        backgroundColor: Colors.white, // Netflix are fundal negru de obicei
+        child: Image.asset(
+          'assets/images/youtube.png',
+          width: imageSize,
+          height: imageSize,
+        ),
+      );
+    }
     if (description.contains('rata bt')) {
       return CircleAvatar(
         radius: 40,
@@ -93,7 +104,7 @@ class TransactionDetailsPage extends StatelessWidget {
         ),
       );
     }
-    if (description.contains('enel')) {
+    if (description.contains('curent ppc')) {
       return CircleAvatar(
         radius: 40,
         backgroundColor: Colors.white,
@@ -126,6 +137,17 @@ class TransactionDetailsPage extends StatelessWidget {
         ),
       );
     }
+    if (description.contains('lidl')) {
+      return CircleAvatar(
+        radius: 40,
+        backgroundColor: Colors.white,
+        child: Image.asset(
+          'assets/images/lidl.png',
+          width: imageSize,
+          height: imageSize,
+        ),
+      );
+    }
     if (description.contains('starbucks')) {
       return CircleAvatar(
         radius: 40,
@@ -141,12 +163,12 @@ class TransactionDetailsPage extends StatelessWidget {
     return CircleAvatar(
       radius: 40,
       backgroundColor: isExpense
-          ? Colors.red.withValues(alpha: 0.1)
+          ? const Color(0xff7b0828).withValues(alpha: 0.1)
           : const Color(0xff2f7e79).withValues(alpha: 0.1),
       child: Icon(
         _getIconForCategory(category),
         size: 40,
-        color: isExpense ? Colors.red[400] : const Color(0xff2f7e79),
+        color: isExpense ? const Color(0xff7b0828) : const Color(0xff2f7e79),
       ),
     );
   }
@@ -326,7 +348,7 @@ class TransactionDetailsPage extends StatelessWidget {
                             ),
                             decoration: BoxDecoration(
                               color: isExpense
-                                  ? Colors.red.withValues(alpha: 0.1)
+                                  ? const Color(0xff7b0828).withValues(alpha: 0.1)
                                   : const Color(0xff2f7e79).withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(20),
                             ),
@@ -334,7 +356,7 @@ class TransactionDetailsPage extends StatelessWidget {
                               isExpense ? 'Cheltuială' : 'Venit',
                               style: TextStyle(
                                 color: isExpense
-                                    ? Colors.red[400]
+                                    ? const Color(0xff7b0828)
                                     : const Color(0xff2f7e79),
                                 fontWeight: FontWeight.bold,
                               ),
@@ -378,7 +400,7 @@ class TransactionDetailsPage extends StatelessWidget {
                             'Status',
                             'Finalizat',
                             textColor: isExpense
-                                ? Colors.red
+                                ? const Color(0xff7b0828)
                                 : const Color(0xff2f7e79),
                             isBold: true,
                           ),

@@ -131,7 +131,7 @@ class ProfilePage extends StatelessWidget {
                           _buildProfileOption(
                             icon: Icons.logout,
                             title: 'Deconectare',
-                            iconColor: Colors.red[400]!,
+                            iconColor: const Color(0xff7b0828),
                             onTap: signOut,
                           ),
                         ],

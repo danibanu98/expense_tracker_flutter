@@ -69,7 +69,7 @@ class _WalletPageState extends State<WalletPage> {
                   padding: const EdgeInsets.only(
                     left: 20,
                     right: 20,
-                    top: 20,
+                    top: 50,
                     bottom: 10,
                   ),
                   child: Align(

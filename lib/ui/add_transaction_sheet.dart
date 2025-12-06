@@ -32,14 +32,19 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
   bool _isLoadingAccounts = true;
 
   final List<String> _expenseCategories = [
-    'Mâncare',
-    'Transport',
-    'Facturi',
-    'Timp Liber',
+    'Alimente & Băuturi',
     'Cumpărături',
+    'Locuinţă',
+    'Transport',
+    'Maşină',
+    'Viaţă & Divertisment',
+    'Hardware PC',
+    'Cheltuieli financiare',
+    'Investiţii',
+    'Cadou',
     'Altul',
   ];
-  final List<String> _incomeCategories = ['Salariu', 'Bonus', 'Cadou', 'Altul'];
+  final List<String> _incomeCategories = ['Salariu', 'Bonus', 'Cadou', 'Investiţii', 'Altul'];
   String? _selectedCategory;
   DateTime _selectedDate = DateTime.now();
 
@@ -250,8 +255,8 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                               borderRadius: BorderRadius.circular(12),
                               selectedColor: Colors.white,
                               fillColor: _selectedType == 'expense'
-                                  ? Colors.red[400]
-                                  : Colors.green[400],
+                                  ? const Color(0xff7b0828)
+                                  : const Color(0xff2f7e79),
                               children: [
                                 Padding(
                                   padding: const EdgeInsets.symmetric(
@@ -306,8 +311,8 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
                               color: _selectedType == 'expense'
-                                  ? Colors.red[400]
-                                  : Colors.green[400],
+                                  ? const Color(0xff7b0828)
+                                  : const Color(0xff2f7e79),
                             ),
                             decoration: InputDecoration(
                               labelText: 'Sumă',
