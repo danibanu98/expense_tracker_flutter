@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:expense_tracker_nou/providers/settings_provider.dart';
 import 'package:expense_tracker_nou/services/firestore_service.dart';
+import 'package:expense_tracker_nou/services/brand_service.dart';
 import 'package:expense_tracker_nou/ui/add_transaction_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -32,179 +33,17 @@ class TransactionDetailsPage extends StatelessWidget {
     }
   }
 
-  // --- FUNCȚIE PENTRU ICONIȚE MARI (BRANDURI) ---
   Widget _buildBigTransactionIcon(Map<String, dynamic> data, bool isExpense) {
-    String description = (data['description'] ?? '').toLowerCase();
-    String category = data['category'] ?? 'Altele';
-    double imageSize = 50;
-
-    if (description.contains('netflix')) {
-      return CircleAvatar(
-        radius: 40,
-        backgroundColor: Colors.white, // Netflix are fundal negru de obicei
-        child: Image.asset(
-          'assets/images/netflix.png',
-          width: imageSize,
-          height: imageSize,
-        ),
-      );
-    }
-    if (description.contains('asigurare ale')) {
-      return CircleAvatar(
-        radius: 40,
-        backgroundColor: Colors.white, // Netflix are fundal negru de obicei
-        child: Image.asset(
-          'assets/images/nn.png',
-          width: imageSize,
-          height: imageSize,
-        ),
-      );
-    }
-        if (description.contains('youtube')) {
-      return CircleAvatar(
-        radius: 40,
-        backgroundColor: Colors.white, // Netflix are fundal negru de obicei
-        child: Image.asset(
-          'assets/images/youtube.png',
-          width: imageSize,
-          height: imageSize,
-        ),
-      );
-    }
-    if (description.contains('rata bt')) {
-      return CircleAvatar(
-        radius: 40,
-        backgroundColor: Colors.white,
-        child: Image.asset(
-          'assets/images/bt.png',
-          width: imageSize,
-          height: imageSize,
-        ),
-      );
-    }
-    if (description.contains('orange')) {
-      return CircleAvatar(
-        radius: 40,
-        backgroundColor: Colors.white,
-        child: Image.asset(
-          'assets/images/orange.png',
-          width: imageSize,
-          height: imageSize,
-        ),
-      );
-    }
-    if (description.contains('digi')) {
-      return CircleAvatar(
-        radius: 40,
-        backgroundColor: Colors.white,
-        child: Image.asset(
-          'assets/images/digi.png',
-          width: imageSize,
-          height: imageSize,
-        ),
-      );
-    }
-    if (description.contains('curent ppc')) {
-      return CircleAvatar(
-        radius: 40,
-        backgroundColor: Colors.white,
-        child: Image.asset(
-          'assets/images/enel.png',
-          width: imageSize,
-          height: imageSize,
-        ),
-      );
-    }
-    if (description.contains('eon')) {
-      return CircleAvatar(
-        radius: 40,
-        backgroundColor: Colors.white,
-        child: Image.asset(
-          'assets/images/eon.png',
-          width: imageSize,
-          height: imageSize,
-        ),
-      );
-    }
-    if (description.contains('revolut')) {
-      return CircleAvatar(
-        radius: 40,
-        backgroundColor: Colors.white,
-        child: Image.asset(
-          'assets/images/revolut.png',
-          width: imageSize,
-          height: imageSize,
-        ),
-      );
-    }
-    if (description.contains('lidl')) {
-      return CircleAvatar(
-        radius: 40,
-        backgroundColor: Colors.white,
-        child: Image.asset(
-          'assets/images/lidl.png',
-          width: imageSize,
-          height: imageSize,
-        ),
-      );
-    }
-    if (description.contains('starbucks')) {
-      return CircleAvatar(
-        radius: 40,
-        backgroundColor: Colors.white,
-        child: Image.asset(
-          'assets/images/starbucks.png',
-          width: imageSize,
-          height: imageSize,
-        ),
-      );
-    }
-    // Logica Generic
-    return CircleAvatar(
-      radius: 40,
-      backgroundColor: isExpense
-          ? const Color(0xff7b0828).withValues(alpha: 0.1)
-          : const Color(0xff2f7e79).withValues(alpha: 0.1),
-      child: Icon(
-        _getIconForCategory(category),
-        size: 40,
-        color: isExpense ? const Color(0xff7b0828) : const Color(0xff2f7e79),
-      ),
+    final description = data['description'] ?? '';
+    final category = data['category'] ?? 'Altele';
+    return BrandService.getBigTransactionIcon(
+      description: description,
+      category: category,
+      isExpense: isExpense,
+      getIconForCategory: BrandService.getIconForCategory,
     );
   }
 
-  IconData _getIconForCategory(String category) {
-    switch (category) {
-      case 'Alimente & Băuturi':
-        return Icons.restaurant;
-      case 'Cumpărături':
-        return Icons.shopping_bag;
-      case 'Locuinţă':
-        return Icons.home;
-      case 'Transport':
-        return Icons.car_rental;
-      case 'Maşină':
-        return Icons.directions_car;
-      case 'Viaţă & Divertisment':
-        return Icons.sports_esports;
-      case 'Hardware PC':
-        return Icons.computer;
-      case 'Cheltuieli financiare':
-        return Icons.payments;
-      case 'Investiţii':
-        return Icons.attach_money;
-      case 'Salariu':
-        return Icons.work;
-      case 'Cadou':
-        return Icons.cake;
-      case 'Bonus':
-        return Icons.card_giftcard;
-      case 'Altele':
-        return Icons.clear_all_rounded;
-      default:
-        return Icons.money;
-    }
-  }
   @override
   Widget build(BuildContext context) {
     final settings = Provider.of<SettingsProvider>(context);
@@ -253,16 +92,22 @@ class TransactionDetailsPage extends StatelessWidget {
                         icon: Icon(Icons.arrow_back, color: Colors.white),
                         onPressed: () => Navigator.of(context).pop(),
                       ),
-                      Text(
-                        'Detalii Tranzacție',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                      Expanded(
+                        child: Text(
+                          'Detalii Tranzacție',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
                       // --- GRUP DE BUTOANE (EDIT & DELETE) ---
                       Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           IconButton(
                             icon: Icon(Icons.edit, color: Colors.white),
@@ -427,30 +272,37 @@ class TransactionDetailsPage extends StatelessWidget {
                                     color: Colors.grey[600],
                                   ),
                                 ),
-                                FutureBuilder<String>(
-                                  future: _getUserName(
-                                    ownerUid,
-                                  ), // Căutăm numele în DB
-                                  builder: (context, snapshot) {
-                                    if (snapshot.connectionState ==
-                                        ConnectionState.waiting) {
-                                      return SizedBox(
-                                        width: 15,
-                                        height: 15,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                        ),
-                                      );
-                                    }
-                                    return Text(
-                                      snapshot.data ??
-                                          '...', // Afișăm numele real
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    );
-                                  },
+                                Flexible(
+                                  child: Align(
+                                    alignment: Alignment.centerRight,
+                                    child: FutureBuilder<String>(
+                                      future: _getUserName(
+                                        ownerUid,
+                                      ), // Căutăm numele în DB
+                                      builder: (context, snapshot) {
+                                        if (snapshot.connectionState ==
+                                            ConnectionState.waiting) {
+                                          return SizedBox(
+                                            width: 15,
+                                            height: 15,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                            ),
+                                          );
+                                        }
+                                        return Text(
+                                          snapshot.data ??
+                                              '...', // Afișăm numele real
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),

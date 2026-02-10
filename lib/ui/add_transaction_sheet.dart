@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:expense_tracker_nou/providers/settings_provider.dart';
 import 'package:expense_tracker_nou/services/firestore_service.dart';
+import 'package:expense_tracker_nou/utils/validators.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
@@ -44,7 +45,13 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
     'Cadou',
     'Altele',
   ];
-  final List<String> _incomeCategories = ['Salariu', 'Bonus', 'Cadou', 'Investiţii', 'Altele'];
+  final List<String> _incomeCategories = [
+    'Salariu',
+    'Bonus',
+    'Cadou',
+    'Investiţii',
+    'Altele',
+  ];
   String? _selectedCategory;
   DateTime _selectedDate = DateTime.now();
 
@@ -114,17 +121,33 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
 
   void _saveTransaction() async {
     final description = _descriptionController.text.trim();
-    final amount = double.tryParse(_amountController.text.trim()) ?? 0.0;
+    final amountStr = _amountController.text.trim();
 
-    if (description.isEmpty ||
-        amount <= 0 ||
-        _selectedAccountId == null ||
-        _selectedCategory == null) {
+    final descError = Validators.required(description, 'Descrierea');
+    if (descError != null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(descError)));
+      return;
+    }
+    final amountError = Validators.amount(amountStr);
+    if (amountError != null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(amountError)));
+      return;
+    }
+    if (_selectedAccountId == null || _selectedCategory == null) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Completează toate câmpurile corect.')),
+        SnackBar(content: Text('Selectează contul și categoria.')),
       );
       return;
     }
+
+    final amount = double.parse(amountStr.replaceAll(',', '.'));
 
     try {
       if (_isEditing) {
@@ -154,9 +177,9 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
       }
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Eroare la salvare: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Eroare la salvare: $e')));
     }
   }
 
@@ -197,19 +220,24 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                         icon: Icon(Icons.arrow_back, color: Colors.white),
                         onPressed: () => Navigator.of(context).pop(),
                       ),
-                      Text(
-                        _isEditing
-                            ? 'Editează Tranzacția'
-                            : (_selectedType == 'expense'
-                                  ? 'Adaugă Cheltuială'
-                                  : 'Adaugă Venit'),
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                      Expanded(
+                        child: Text(
+                          _isEditing
+                              ? 'Editează Tranzacția'
+                              : (_selectedType == 'expense'
+                                    ? 'Adaugă Cheltuială'
+                                    : 'Adaugă Venit'),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
                         ),
                       ),
-                      SizedBox(width: 48), // Spacer pentru centrare
+                      const SizedBox(width: 48), // Spacer pentru centrare
                     ],
                   ),
                 ),

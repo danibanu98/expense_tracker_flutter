@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:expense_tracker_nou/ui/register_page.dart';
+import 'package:expense_tracker_nou/utils/validators.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -15,19 +16,33 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _passwordController = TextEditingController();
   bool _isPasswordVisible = false; // Implicit, parola e ascunsă
 
-  // 2. O funcție pentru a gestiona apăsarea butonului de Login
   Future<void> signIn() async {
-    try {
-      // 3. Folosim Firebase Auth pentru a face login
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+
+    final emailError = Validators.email(email);
+    if (emailError != null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(emailError)),
       );
-      // Nu e nevoie să facem nimic după login.
-      // "Dispecerul" nostru (AuthPage) va vedea automat
-      // schimbarea și ne va trimite la HomePage!
+      return;
+    }
+    final passwordError = Validators.password(password);
+    if (passwordError != null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(passwordError)),
+      );
+      return;
+    }
+
+    try {
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
     } on FirebaseAuthException catch (e) {
-      // 4. Dacă apare o eroare (ex: parolă greșită), arătăm o alertă
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.message ?? 'A apărut o eroare')),

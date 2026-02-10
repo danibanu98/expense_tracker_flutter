@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:expense_tracker_nou/services/firestore_service.dart';
+import 'package:expense_tracker_nou/utils/validators.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 
@@ -42,14 +43,26 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
 
   void _saveAccount() async {
     final name = _nameController.text.trim();
-    final balance = double.tryParse(_balanceController.text.trim()) ?? 0.0;
+    final balanceStr = _balanceController.text.trim();
 
-    if (name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Numele contului este obligatoriu.')),
-      );
+    final nameError = Validators.required(name, 'Numele contului');
+    if (nameError != null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(nameError)));
       return;
     }
+    final amountError = Validators.amount(balanceStr, allowZero: true);
+    if (amountError != null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(amountError)));
+      return;
+    }
+
+    final balance = double.parse(balanceStr.trim().replaceAll(',', '.'));
 
     try {
       if (widget.accountToEdit == null) {
@@ -71,9 +84,9 @@ class _AddAccountSheetState extends State<AddAccountSheet> {
         debugPrint('Eroare: $e');
       }
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Eroare: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Eroare: $e')));
       }
     }
   }

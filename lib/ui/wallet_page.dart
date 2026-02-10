@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:expense_tracker_nou/services/firestore_service.dart';
 import 'package:expense_tracker_nou/theme/theme.dart';
 import 'package:expense_tracker_nou/ui/add_account_sheet.dart';
+import 'package:expense_tracker_nou/ui/recurring_transactions_page.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:expense_tracker_nou/providers/settings_provider.dart';
@@ -15,6 +16,13 @@ class WalletPage extends StatefulWidget {
 
 class _WalletPageState extends State<WalletPage> {
   final FirestoreService _firestoreService = FirestoreService();
+
+  @override
+  void initState() {
+    super.initState();
+    // Ținem balanțele/istoricul la zi când intri în Portofel.
+    _firestoreService.runDueRecurringTransactions();
+  }
 
   void _showAccountSheet({DocumentSnapshot? account}) {
     showModalBottomSheet(
@@ -105,20 +113,84 @@ class _WalletPageState extends State<WalletPage> {
                     horizontal: 20.0,
                     vertical: 10.0,
                   ),
-                  
-                  child: Center(
-                    child: Text(
-                      'Portofel & Conturi',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+
+                  child: Row(
+                    children: [
+                      const SizedBox(width: 48), // păstrează titlul centrat
+                      Expanded(
+                        child: Text(
+                          'Portofel & Conturi',
+                          textAlign: TextAlign.center,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
                       ),
-                    ),
+                      IconButton(
+                        tooltip: 'Plăți & venituri recurente',
+                        icon: const Icon(Icons.repeat, color: Colors.white),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  const RecurringTransactionsPage(),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
                   ),
                 ),
 
                 _buildTotalBalanceCard(settings),
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  child: Card(
+                    elevation: 0,
+                    color: Theme.of(context)
+                        .colorScheme
+                        .surface
+                        .withValues(alpha: 0.95),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                    child: ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withValues(alpha: 0.1),
+                        child: Icon(
+                          Icons.repeat,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                      title: const Text(
+                        'Recurențe',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: const Text(
+                        'Adaugă plăți/venituri recurente și aplică-le automat.',
+                      ),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                const RecurringTransactionsPage(),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
                 Padding(
                   padding: const EdgeInsets.only(
                     left: 20,
@@ -216,32 +288,40 @@ class _WalletPageState extends State<WalletPage> {
           name,
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              '$symbol${balance.toStringAsFixed(2)}',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.primary,
+        trailing: FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerRight,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '$symbol${balance.toStringAsFixed(2)}',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
               ),
-            ),
-            SizedBox(width: 10),
-            IconButton(
-              icon: Icon(Icons.edit, size: 20, color: Colors.grey),
-              onPressed: () => _showAccountSheet(account: doc),
-              padding: EdgeInsets.zero,
-              constraints: BoxConstraints(),
-            ),
-            SizedBox(width: 5),
-            IconButton(
-              icon: Icon(Icons.delete, size: 20, color: const Color(0xff7b0828)),
-              onPressed: () => _showDeleteAccountDialog(doc),
-              padding: EdgeInsets.zero,
-              constraints: BoxConstraints(),
-            ),
-          ],
+              SizedBox(width: 10),
+              IconButton(
+                icon: Icon(Icons.edit, size: 20, color: Colors.grey),
+                onPressed: () => _showAccountSheet(account: doc),
+                padding: EdgeInsets.zero,
+                constraints: BoxConstraints(),
+              ),
+              SizedBox(width: 5),
+              IconButton(
+                icon: Icon(
+                  Icons.delete,
+                  size: 20,
+                  color: const Color(0xff7b0828),
+                ),
+                onPressed: () => _showDeleteAccountDialog(doc),
+                padding: EdgeInsets.zero,
+                constraints: BoxConstraints(),
+              ),
+            ],
+          ),
         ),
       ),
     );

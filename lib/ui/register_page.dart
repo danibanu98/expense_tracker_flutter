@@ -1,4 +1,5 @@
 import 'package:expense_tracker_nou/services/firestore_service.dart';
+import 'package:expense_tracker_nou/utils/validators.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -21,20 +22,45 @@ class _RegisterPageState extends State<RegisterPage> {
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
 
-  // Funcția pentru înregistrare
   Future<void> signUp() async {
-    // Verificăm dacă parolele se potrivesc
-    if (_passwordController.text.trim() !=
-        _confirmPasswordController.text.trim()) {
+    final name = _nameController.text.trim();
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+    final confirmPassword = _confirmPasswordController.text.trim();
+    final inviteCode = _inviteCodeController.text.trim();
+
+    var error = Validators.required(name, 'Numele');
+    if (error != null) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Parolele nu se potrivesc!')),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+      return;
+    }
+    error = Validators.email(email);
+    if (error != null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+      return;
+    }
+    error = Validators.password(password);
+    if (error != null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+      return;
+    }
+    error = Validators.confirmPassword(confirmPassword, password);
+    if (error != null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+      return;
+    }
+    error = Validators.inviteCode(inviteCode);
+    if (error != null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
       return;
     }
 
     try {
-      // Arată un cerc de încărcare cât timp se creează contul
       if (!mounted) return;
       showDialog(
         context: context,
@@ -43,38 +69,27 @@ class _RegisterPageState extends State<RegisterPage> {
       );
 
       UserCredential userCredential = await FirebaseAuth.instance
-          .createUserWithEmailAndPassword(
-            email: _emailController.text.trim(),
-            password: _passwordController.text.trim(),
-          );
+          .createUserWithEmailAndPassword(email: email, password: password);
 
-      // Creăm documentele în Firestore
       await _firestoreService.createUserDocument(
         userCredential,
-        _nameController.text.trim(),
-        _inviteCodeController.text.trim(),
+        name,
+        inviteCode,
       );
 
-      // Ascundem cercul de încărcare
       if (!mounted) return;
       Navigator.of(context).pop();
-
-      // Închidem pagina de register (ne întoarcem la Login sau AuthPage ne duce la Home)
-      if (mounted) Navigator.of(context).pop();
+      if (!mounted) return;
+      Navigator.of(context).pop();
     } on FirebaseAuthException catch (e) {
-      // Ascundem loading-ul la eroare
       if (!mounted) return;
       Navigator.of(context).pop();
-      
-      // Afișăm eroarea
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.message ?? 'A apărut o eroare la înregistrare')),
       );
     } catch (e) {
-      // Gestionăm alte tipuri de erori (ex: erori Firestore)
       if (!mounted) return;
       Navigator.of(context).pop();
-      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Eroare: ${e.toString()}')),
       );

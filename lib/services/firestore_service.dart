@@ -15,6 +15,59 @@ class FirestoreService {
   final CollectionReference households = FirebaseFirestore.instance.collection(
     'households',
   );
+  final CollectionReference recurringTransactions = FirebaseFirestore.instance
+      .collection('recurring_transactions');
+
+  DateTime _addMonthsStable(DateTime date, int monthsToAdd) {
+    final year = date.year + ((date.month - 1 + monthsToAdd) ~/ 12);
+    final month = ((date.month - 1 + monthsToAdd) % 12) + 1;
+    final lastDayOfTargetMonth = DateTime(year, month + 1, 0).day;
+    final day = date.day > lastDayOfTargetMonth
+        ? lastDayOfTargetMonth
+        : date.day;
+    return DateTime(
+      year,
+      month,
+      day,
+      date.hour,
+      date.minute,
+      date.second,
+      date.millisecond,
+      date.microsecond,
+    );
+  }
+
+  DateTime _addRecurringInterval({
+    required DateTime from,
+    required String frequency,
+    required int interval,
+  }) {
+    final safeInterval = interval <= 0 ? 1 : interval;
+    switch (frequency) {
+      case 'daily':
+        return from.add(Duration(days: safeInterval));
+      case 'weekly':
+        return from.add(Duration(days: 7 * safeInterval));
+      case 'monthly':
+        return _addMonthsStable(from, safeInterval);
+      case 'yearly':
+        return _addMonthsStable(from, 12 * safeInterval);
+      default:
+        return from.add(Duration(days: 30 * safeInterval));
+    }
+  }
+
+  Future<String> _getHouseholdIdOrThrow() async {
+    final String? userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) {
+      throw Exception('Utilizator nelogat.');
+    }
+    final userDoc = await users.doc(userId).get();
+    if (!userDoc.exists) {
+      throw Exception('Utilizator inexistent.');
+    }
+    return userDoc.get('householdId');
+  }
 
   // --- 1. ADĂUGARE TRANZACȚIE ---
   Future<void> addTransaction(
@@ -205,10 +258,13 @@ class FirestoreService {
       // Găsim household-ul existent
       final householdDoc = householdQuery.docs.first;
       householdId = householdDoc.id;
-      finalInviteCode = householdDoc.get('inviteCode') ?? inviteCode.trim().toUpperCase();
+      finalInviteCode =
+          householdDoc.get('inviteCode') ?? inviteCode.trim().toUpperCase();
     } else {
       // Dacă nu există cod de invitație, creează un household nou
-      finalInviteCode = randomAlphaNumeric(6).toUpperCase(); // Generează cod de 6 caractere
+      finalInviteCode = randomAlphaNumeric(
+        6,
+      ).toUpperCase(); // Generează cod de 6 caractere
 
       final householdRef = households.doc();
       householdId = householdRef.id;
@@ -313,5 +369,231 @@ class FirestoreService {
 
     // 5. Execută totul deodată
     await batch.commit();
+  }
+
+  // ---------------------------------------------------------------------------
+  // TRANZACȚII RECURENTE (plăți/venituri)
+  // ---------------------------------------------------------------------------
+
+  Stream<QuerySnapshot> getRecurringTransactionsStream() {
+    final String? userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) return Stream.empty();
+
+    return users
+        .doc(userId)
+        .snapshots()
+        .asyncMap((userDoc) {
+          if (!userDoc.exists) return Stream<QuerySnapshot>.empty();
+          final String householdId = userDoc.get('householdId');
+          return recurringTransactions
+              .where('householdId', isEqualTo: householdId)
+              .orderBy('nextRunAt')
+              .snapshots();
+        })
+        .asyncExpand((stream) => stream);
+  }
+
+  Future<void> addRecurringTransaction({
+    required String description,
+    required double amount,
+    required String type, // expense/income
+    required String accountId,
+    required String category,
+    required String frequency, // daily/weekly/monthly/yearly
+    required int interval,
+    required DateTime startDate,
+    bool active = true,
+  }) async {
+    final String? userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) throw Exception('Utilizator nelogat.');
+    final householdId = await _getHouseholdIdOrThrow();
+
+    final docRef = recurringTransactions.doc();
+    await docRef.set({
+      'description': description,
+      'amount': amount,
+      'type': type,
+      'accountId': accountId,
+      'category': category,
+      'frequency': frequency,
+      'interval': interval <= 0 ? 1 : interval,
+      'startDate': Timestamp.fromDate(startDate),
+      'nextRunAt': Timestamp.fromDate(startDate),
+      'lastRunAt': null,
+      'active': active,
+      'uid': userId,
+      'householdId': householdId,
+      'createdAt': Timestamp.now(),
+      'updatedAt': Timestamp.now(),
+    });
+  }
+
+  Future<void> updateRecurringTransaction({
+    required String recurringId,
+    required String description,
+    required double amount,
+    required String type,
+    required String accountId,
+    required String category,
+    required String frequency,
+    required int interval,
+    required DateTime startDate,
+    required bool active,
+  }) async {
+    final docRef = recurringTransactions.doc(recurringId);
+    final snapshot = await docRef.get();
+    if (!snapshot.exists) throw Exception('Tranzacția recurentă nu există.');
+
+    final data = snapshot.data() as Map<String, dynamic>;
+    final Timestamp? lastRunTs = data['lastRunAt'];
+    final DateTime? lastRunAt = lastRunTs?.toDate();
+    final now = DateTime.now();
+
+    DateTime nextRunAt;
+    if (lastRunAt == null) {
+      nextRunAt = startDate;
+    } else {
+      nextRunAt = _addRecurringInterval(
+        from: lastRunAt,
+        frequency: frequency,
+        interval: interval,
+      );
+      // dacă noul startDate e în viitor, respectă-l ca limită minimă
+      if (startDate.isAfter(nextRunAt)) nextRunAt = startDate;
+    }
+    // dacă nextRunAt e mult în trecut, îl lăsăm așa; runDue îl va procesa
+    if (nextRunAt.isAfter(now.add(const Duration(days: 3650)))) {
+      // sanity: evită date absurde
+      nextRunAt = now;
+    }
+
+    await docRef.update({
+      'description': description,
+      'amount': amount,
+      'type': type,
+      'accountId': accountId,
+      'category': category,
+      'frequency': frequency,
+      'interval': interval <= 0 ? 1 : interval,
+      'startDate': Timestamp.fromDate(startDate),
+      'nextRunAt': Timestamp.fromDate(nextRunAt),
+      'active': active,
+      'updatedAt': Timestamp.now(),
+    });
+  }
+
+  Future<void> deleteRecurringTransaction(String recurringId) async {
+    await recurringTransactions.doc(recurringId).delete();
+  }
+
+  /// Rulează tranzacțiile recurente „due” și creează tranzacții normale în `expenses`,
+  /// actualizând balanțele conturilor. Este idempotent prin `nextRunAt`.
+  Future<void> runDueRecurringTransactions({int maxRunsPerItem = 24}) async {
+    final String? userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) return;
+
+    final householdId = await _getHouseholdIdOrThrow();
+    final now = DateTime.now();
+
+    // Query: active + householdId. Filtrarea pe nextRunAt <= now o facem în cod
+    // pentru a evita indecși/limitări de query combinate.
+    final query = await recurringTransactions
+        .where('householdId', isEqualTo: householdId)
+        .where('active', isEqualTo: true)
+        .get();
+
+    for (final doc in query.docs) {
+      final data = doc.data() as Map<String, dynamic>;
+      final Timestamp? nextTs = data['nextRunAt'];
+      if (nextTs == null) continue;
+
+      DateTime nextRunAt = nextTs.toDate();
+      final String frequency = (data['frequency'] ?? 'monthly') as String;
+      final int interval = (data['interval'] ?? 1) as int;
+
+      int runs = 0;
+      while (!nextRunAt.isAfter(now) && runs < maxRunsPerItem) {
+        runs++;
+        await _applyRecurringOccurrence(
+          recurringId: doc.id,
+          occurrenceDate: nextRunAt,
+        );
+
+        nextRunAt = _addRecurringInterval(
+          from: nextRunAt,
+          frequency: frequency,
+          interval: interval,
+        );
+      }
+    }
+  }
+
+  Future<void> _applyRecurringOccurrence({
+    required String recurringId,
+    required DateTime occurrenceDate,
+  }) async {
+    final recurringRef = recurringTransactions.doc(recurringId);
+
+    await FirebaseFirestore.instance.runTransaction((tx) async {
+      final recurringSnap = await tx.get(recurringRef);
+      if (!recurringSnap.exists) return;
+      final recurring = recurringSnap.data() as Map<String, dynamic>;
+
+      if (recurring['active'] != true) return;
+
+      final Timestamp? nextTs = recurring['nextRunAt'];
+      if (nextTs == null) return;
+      final currentNextRunAt = nextTs.toDate();
+      // Protecție contra dublării: rulează doar dacă exact aceasta e scadența curentă
+      if (currentNextRunAt.compareTo(occurrenceDate) != 0) return;
+
+      final String accountId = recurring['accountId'] as String;
+      final String type = (recurring['type'] ?? 'expense') as String;
+      final double amount = (recurring['amount'] ?? 0.0).toDouble();
+      final String description = (recurring['description'] ?? '') as String;
+      final String category = (recurring['category'] ?? 'Altele') as String;
+      final String frequency = (recurring['frequency'] ?? 'monthly') as String;
+      final int interval = (recurring['interval'] ?? 1) as int;
+      final String? uid = recurring['uid'] as String?;
+      final String householdId = recurring['householdId'] as String;
+
+      final accountRef = accounts.doc(accountId);
+      final accountSnap = await tx.get(accountRef);
+      if (!accountSnap.exists) {
+        throw Exception('Contul pentru recurent nu a fost găsit.');
+      }
+
+      double currentBalance =
+          (accountSnap.data() as Map<String, dynamic>)['balance'] ?? 0.0;
+      final double newBalance = type == 'income'
+          ? (currentBalance + amount)
+          : (currentBalance - amount);
+
+      final expenseRef = expenses.doc();
+      tx.set(expenseRef, {
+        'description': description,
+        'amount': amount,
+        'type': type,
+        'timestamp': Timestamp.fromDate(occurrenceDate),
+        'uid': uid,
+        'householdId': householdId,
+        'accountId': accountId,
+        'category': category,
+        'recurringId': recurringId, // link pentru trasabilitate
+      });
+
+      tx.update(accountRef, {'balance': newBalance});
+
+      final nextRunAt = _addRecurringInterval(
+        from: occurrenceDate,
+        frequency: frequency,
+        interval: interval,
+      );
+      tx.update(recurringRef, {
+        'lastRunAt': Timestamp.fromDate(occurrenceDate),
+        'nextRunAt': Timestamp.fromDate(nextRunAt),
+        'updatedAt': Timestamp.now(),
+      });
+    });
   }
 }

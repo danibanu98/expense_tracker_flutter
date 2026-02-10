@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:expense_tracker_nou/services/firestore_service.dart';
+import 'package:expense_tracker_nou/services/brand_service.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -334,123 +335,15 @@ class _StatisticsPageState extends State<StatisticsPage> {
     );
   }
 
-  // --- FUNCȚIA HELPER PENTRU ICONIȚE (CU BRANDING) ---
-  // Am adăugat această funcție din HomePage
   Widget _buildTransactionLeading(Map<String, dynamic> data, bool isExpense) {
-    String description = (data['description'] ?? '').toLowerCase();
-    String category = data['category'] ?? 'Altele';
-
-    // Logica pentru Brand-uri
-    if (description.contains('netflix')) {
-      return CircleAvatar(
-        backgroundColor: Colors.white,
-        child: Image.asset('assets/images/netflix.png', width: 28, height: 28),
-      );
-    }
-    if (description.contains('asigurare ale')) {
-      return CircleAvatar(
-        backgroundColor: Colors.white,
-        child: Image.asset('assets/images/nn.png', width: 28, height: 28),
-      );
-    }
-    if (description.contains('youtube')) {
-      return CircleAvatar(
-        backgroundColor: Colors.white,
-        child: Image.asset('assets/images/youtube.png', width: 28, height: 28),
-      );
-    }
-    if (description.contains('rata bt')) {
-      return CircleAvatar(
-        backgroundColor: Colors.white,
-        child: Image.asset('assets/images/bt.png', width: 28, height: 28),
-      );
-    }
-    if (description.contains('orange')) {
-      return CircleAvatar(
-        backgroundColor: Colors.white,
-        child: Image.asset('assets/images/orange.png', width: 28, height: 28),
-      );
-    }
-    if (description.contains('digi')) {
-      return CircleAvatar(
-        backgroundColor: Colors.white,
-        child: Image.asset('assets/images/digi.png', width: 28, height: 28),
-      );
-    }
-    if (description.contains('curent ppc')) {
-      return CircleAvatar(
-        backgroundColor: Colors.white,
-        child: Image.asset('assets/images/enel.png', width: 28, height: 28),
-      );
-    }
-    if (description.contains('eon')) {
-      return CircleAvatar(
-        backgroundColor: Colors.white,
-        child: Image.asset('assets/images/eon.png', width: 28, height: 28),
-      );
-    }
-    if (description.contains('revolut')) {
-      return CircleAvatar(
-        backgroundColor: Colors.white,
-        child: Image.asset('assets/images/revolut.png', width: 28, height: 28),
-      );
-    }
-    if (description.contains('lidl')) {
-      return CircleAvatar(
-        backgroundColor: Colors.white,
-        child: Image.asset('assets/images/lidl.png', width: 28, height: 28),
-      );
-    }
-    if (description.contains('starbucks')) {
-      return CircleAvatar(
-        backgroundColor: Colors.white,
-        child: Image.asset('assets/images/starbucks.png', width: 28, height: 28),
-      );
-    }
-
-    // Logica pentru Categorii Generice
-    return CircleAvatar(
-      backgroundColor: isExpense
-          ? const Color(0xff7b0828).withValues(alpha: 0.1)
-          : const Color(0xff2f7e79).withValues(alpha: 0.1), // Folosim green standard dacă accentGreen nu e disponibil ușor
-      child: Icon(
-        _getIconForCategory(category),
-        color: isExpense ? Colors.red[300] : Colors.green[300],
-      ),
+    final description = data['description'] ?? '';
+    final category = data['category'] ?? 'Altele';
+    return BrandService.getTransactionLeading(
+      description: description,
+      category: category,
+      isExpense: isExpense,
+      getIconForCategory: BrandService.getIconForCategory,
     );
-  }
-
-  IconData _getIconForCategory(String category) {
-    switch (category) {
-      case 'Alimente & Băuturi':
-        return Icons.restaurant;
-      case 'Cumpărături':
-        return Icons.shopping_bag;
-      case 'Locuinţă':
-        return Icons.home;
-      case 'Transport':
-        return Icons.car_rental;
-      case 'Maşină':
-        return Icons.directions_car;
-      case 'Viaţă & Divertisment':
-        return Icons.sports_esports;
-      case 'Hardware PC':
-        return Icons.computer;
-      case 'Cheltuieli financiare':
-        return Icons.payments;
-      case 'Investiţii':
-        return Icons.attach_money;
-      case 'Salariu':
-        return Icons.work;
-      case 'Bonus':
-        return Icons.card_giftcard;
-      case 'Cadou':
-        return Icons.cake;
-      case 'Altele':
-        return Icons.clear_all_rounded;
-      default:
-        return Icons.money;
-    }
   }
 
   Widget _buildLineChart(List<FlSpot> spots, double maxY, int periodIndex) {
