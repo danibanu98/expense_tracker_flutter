@@ -149,23 +149,23 @@ class _WalletPageState extends State<WalletPage> {
 
                 _buildTotalBalanceCard(settings),
                 Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 6,
+                  ),
                   child: Card(
                     elevation: 0,
-                    color: Theme.of(context)
-                        .colorScheme
-                        .surface
-                        .withValues(alpha: 0.95),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.surface.withValues(alpha: 0.95),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(15),
                     ),
                     child: ListTile(
                       leading: CircleAvatar(
-                        backgroundColor: Theme.of(context)
-                            .colorScheme
-                            .primary
-                            .withValues(alpha: 0.1),
+                        backgroundColor: Theme.of(
+                          context,
+                        ).colorScheme.primary.withValues(alpha: 0.1),
                         child: Icon(
                           Icons.repeat,
                           color: Theme.of(context).colorScheme.primary,
@@ -271,57 +271,69 @@ class _WalletPageState extends State<WalletPage> {
       elevation: 2,
       margin: EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-      child: ListTile(
-        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: CircleAvatar(
-          radius: 24,
-          backgroundColor: Theme.of(
-            context,
-          ).colorScheme.primary.withValues(alpha: 0.1),
-          child: Icon(
-            Icons.account_balance_wallet,
-            color: Theme.of(context).colorScheme.primary,
-            size: 24,
-          ),
-        ),
-        title: Text(
-          name,
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-        ),
-        trailing: FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: Alignment.centerRight,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                '$symbol${balance.toStringAsFixed(2)}',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.primary,
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 24,
+              backgroundColor: Theme.of(
+                context,
+              ).colorScheme.primary.withValues(alpha: 0.1),
+              child: Icon(
+                Icons.account_balance_wallet,
+                color: Theme.of(context).colorScheme.primary,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    '$symbol${balance.toStringAsFixed(2)}',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: Icon(Icons.edit, size: 20, color: Colors.grey),
+                  onPressed: () => _showAccountSheet(account: doc),
+                  padding: EdgeInsets.zero,
+                  constraints: BoxConstraints(),
                 ),
-              ),
-              SizedBox(width: 10),
-              IconButton(
-                icon: Icon(Icons.edit, size: 20, color: Colors.grey),
-                onPressed: () => _showAccountSheet(account: doc),
-                padding: EdgeInsets.zero,
-                constraints: BoxConstraints(),
-              ),
-              SizedBox(width: 5),
-              IconButton(
-                icon: Icon(
-                  Icons.delete,
-                  size: 20,
-                  color: const Color(0xff7b0828),
+                const SizedBox(width: 6),
+                IconButton(
+                  icon: Icon(
+                    Icons.delete,
+                    size: 20,
+                    color: const Color(0xff7b0828),
+                  ),
+                  onPressed: () => _showDeleteAccountDialog(doc),
+                  padding: EdgeInsets.zero,
+                  constraints: BoxConstraints(),
                 ),
-                onPressed: () => _showDeleteAccountDialog(doc),
-                padding: EdgeInsets.zero,
-                constraints: BoxConstraints(),
-              ),
-            ],
-          ),
+              ],
+            ),
+          ],
         ),
       ),
     );

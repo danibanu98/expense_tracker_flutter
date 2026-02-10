@@ -79,9 +79,9 @@ class _RecurringTransactionsPageState extends State<RecurringTransactionsPage> {
 
     await _firestoreService.deleteRecurringTransaction(doc.id);
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Recurrența a fost ștearsă.')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Recurrența a fost ștearsă.')));
   }
 
   @override
@@ -98,7 +98,9 @@ class _RecurringTransactionsPageState extends State<RecurringTransactionsPage> {
               await _firestoreService.runDueRecurringTransactions();
               if (!context.mounted) return;
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Recurențele au fost verificate.')),
+                const SnackBar(
+                  content: Text('Recurențele au fost verificate.'),
+                ),
               );
             },
             icon: const Icon(Icons.play_circle_outline),
@@ -142,68 +144,103 @@ class _RecurringTransactionsPageState extends State<RecurringTransactionsPage> {
               final Timestamp? nextTs = data['nextRunAt'];
               final nextRun = nextTs?.toDate();
 
+              // Custom layout to avoid tight constraints that caused
+              // the subtitle to wrap vertically (one character per line).
               return Card(
                 elevation: 1,
-                child: ListTile(
-                  leading: BrandService.getTransactionLeading(
-                    description: description,
-                    category: category,
-                    isExpense: isExpense,
-                    getIconForCategory: BrandService.getIconForCategory,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
                   ),
-                  title: Text(
-                    description.isEmpty ? '(Fără descriere)' : description,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: Text(
-                    '${_freqLabel(frequency, interval)}'
-                    '${nextRun != null ? ' • Următoarea: ${DateFormat('d MMM yyyy', 'ro').format(nextRun)}' : ''}',
-                  ),
-                  trailing: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerRight,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          '${isExpense ? '-' : '+'}${settings.currencySymbol}${amount.toStringAsFixed(2)}',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: isExpense
-                                ? const Color(0xff7b0828)
-                                : const Color(0xff2f7e79),
+                  child: Row(
+                    children: [
+                      BrandService.getTransactionLeading(
+                        description: description,
+                        category: category,
+                        isExpense: isExpense,
+                        getIconForCategory: BrandService.getIconForCategory,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              description.isEmpty
+                                  ? '(Fără descriere)'
+                                  : description,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              '${_freqLabel(frequency, interval)}'
+                              '${nextRun != null ? ' • Următoarea: ${DateFormat('d MMM yyyy', 'ro').format(nextRun)}' : ''}',
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(color: Colors.grey[700]),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // Trailing controls: amount, switch, edit, delete
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          Text(
+                            '${isExpense ? '-' : '+'}${settings.currencySymbol}${amount.toStringAsFixed(2)}',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: isExpense
+                                  ? const Color(0xff7b0828)
+                                  : const Color(0xff2f7e79),
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 10),
-                        Switch(
-                          value: active,
-                          onChanged: (v) async {
-                            await _firestoreService.updateRecurringTransaction(
-                              recurringId: doc.id,
-                              description: description,
-                              amount: amount,
-                              type: type,
-                              accountId: (data['accountId'] ?? '').toString(),
-                              category: category,
-                              frequency: frequency,
-                              interval: interval,
-                              startDate: (data['startDate'] as Timestamp).toDate(),
-                              active: v,
-                            );
-                          },
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.edit, size: 20),
-                          onPressed: () => _openAdd(edit: doc),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.delete, size: 20),
-                          onPressed: () => _confirmDelete(doc),
-                        ),
-                      ],
-                    ),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Switch(
+                                value: active,
+                                onChanged: (v) async {
+                                  await _firestoreService
+                                      .updateRecurringTransaction(
+                                        recurringId: doc.id,
+                                        description: description,
+                                        amount: amount,
+                                        type: type,
+                                        accountId: (data['accountId'] ?? '')
+                                            .toString(),
+                                        category: category,
+                                        frequency: frequency,
+                                        interval: interval,
+                                        startDate:
+                                            (data['startDate'] as Timestamp)
+                                                .toDate(),
+                                        active: v,
+                                      );
+                                  setState(() {});
+                                },
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.edit, size: 20),
+                                onPressed: () => _openAdd(edit: doc),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete, size: 20),
+                                onPressed: () => _confirmDelete(doc),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                 ),
               );
@@ -214,4 +251,3 @@ class _RecurringTransactionsPageState extends State<RecurringTransactionsPage> {
     );
   }
 }
-
