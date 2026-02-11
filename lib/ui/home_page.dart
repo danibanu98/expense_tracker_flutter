@@ -83,7 +83,7 @@ class _HomePageState extends State<HomePage> {
               ClipPath(
                 clipper: _TopCurveClipper(),
                 child: Container(
-                  height: 350,
+                  height: 300,
                   decoration: BoxDecoration(
                     image: DecorationImage(
                       image: AssetImage('assets/images/fundal.png'),
@@ -264,18 +264,24 @@ class _HomePageState extends State<HomePage> {
                                   subtitle: FutureBuilder<String>(
                                     future: _getUserName(expenseOwnerUid),
                                     builder: (context, nameSnapshot) {
-                                      String ownerName = nameSnapshot.data ?? '...';
+                                      String ownerName =
+                                          nameSnapshot.data ?? '...';
                                       return Text(
                                         "${data['category'] ?? 'Fără categorie'} • $ownerName",
                                       );
                                     },
                                   ),
                                   trailing: Text(
-                                    '${isExpense ? '-' : '+'}${settings.currencySymbol}${amount.toStringAsFixed(2)}',
+                                    // AM MODIFICAT AICI: Am scos '${isExpense ? '-' : '+'}' și am lăsat doar simbolul monedei și suma
+                                    '${amount.toStringAsFixed(2)} ${settings.currencySymbol}',
                                     style: TextStyle(
                                       color: isExpense
-                                          ? const Color(0xff7b0828)
-                                          : const Color(0xff2f7e79),
+                                          ? const Color(
+                                              0xff7b0828,
+                                            ) // Roșu pentru cheltuieli
+                                          : const Color(
+                                              0xff2f7e79,
+                                            ), // Verde pentru venituri
                                       fontWeight: FontWeight.bold,
                                       fontSize: 16,
                                     ),
@@ -301,7 +307,7 @@ class _HomePageState extends State<HomePage> {
     return Card(
       margin: EdgeInsets.all(16.0),
       elevation: 0,
-      color: const Color(0xff2f7e79).withValues(alpha: 0.9),
+      color: const Color(0xff2f7e79).withValues(alpha: 0.97),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       child: Padding(
         padding: const EdgeInsets.all(20.0),
@@ -330,7 +336,7 @@ class _HomePageState extends State<HomePage> {
                       (doc.data() as Map<String, dynamic>)['balance'] ?? 0.0;
                 }
                 return Text(
-                  '${settings.currencySymbol}${totalBalance.toStringAsFixed(2)}',
+                  '${totalBalance.toStringAsFixed(2)} ${settings.currencySymbol}',
                   style: TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.bold,
@@ -403,9 +409,12 @@ class _HomePageState extends State<HomePage> {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, style: TextStyle(color: Colors.white.withValues(alpha: 0.8))),
             Text(
-              '$currencySymbol${amount.toStringAsFixed(2)}',
+              label,
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.8)),
+            ),
+            Text(
+              '${amount.toStringAsFixed(2)} $currencySymbol',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
                 fontSize: 16,

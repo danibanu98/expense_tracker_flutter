@@ -55,20 +55,29 @@ class TransactionDetailsPage extends StatelessWidget {
 
     Timestamp timestamp = data['timestamp'] ?? Timestamp.now();
     DateTime date = timestamp.toDate();
+
+    // Formatul de dată și oră pentru România
     String formattedDate = DateFormat('d MMMM yyyy', 'ro').format(date);
     String formattedTime = DateFormat('HH:mm').format(date);
     String ownerUid = data['uid'] ?? '';
 
+    // Culori specifice din design
+    final Color primaryGreen = const Color(0xff2f7e79);
+    final Color expenseRed = const Color(0xffD32F2F);
+    final Color statusColor = isExpense ? expenseRed : primaryGreen;
+
     return Scaffold(
+      // --- AM ȘTERS APPBAR-UL STANDARD DE AICI ---
       body: Stack(
         children: [
-          // --- 1. FUNDALUL VERDE ---
+          // --- 1. IMAGINEA DE FUNDAL CU CURBĂ ---
           ClipPath(
             clipper: _TopCurveClipper(),
             child: Container(
-              height: 300,
+              height: 320, // Înălțimea imaginii de fundal
               decoration: BoxDecoration(
-                image: DecorationImage(
+                color: primaryGreen,
+                image: const DecorationImage(
                   image: AssetImage('assets/images/fundal.png'),
                   fit: BoxFit.cover,
                 ),
@@ -76,299 +85,311 @@ class TransactionDetailsPage extends StatelessWidget {
             ),
           ),
 
-          SafeArea(
-            child: Column(
-              children: [
-                // --- 2. ANTET ---
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 10,
-                  ),
+          // --- 2. HEADER-UL PERSONALIZAT (Centrat pe zona verde) ---
+          // Acesta înlocuiește AppBar-ul și stă la mijlocul zonei verzi
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 320 - 140, //Înălțimea imaginii minus curbură, aproximativ
+            child: SafeArea(
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
+                      // Buton Back
                       IconButton(
-                        icon: Icon(Icons.arrow_back, color: Colors.white),
+                        icon: const Icon(
+                          Icons.arrow_back_ios_new,
+                          color: Colors.white,
+                          size: 20,
+                        ),
                         onPressed: () => Navigator.of(context).pop(),
                       ),
-                      Expanded(
-                        child: Text(
-                          'Detalii Tranzacție',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
+
+                      // Titlu
+                      const Text(
+                        'Detalii Tranzacție',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 20, // Am mărit puțin fontul
                         ),
                       ),
-                      // --- GRUP DE BUTOANE (EDIT & DELETE) ---
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: Icon(Icons.edit, color: Colors.white),
-                            onPressed: () async {
-                              final result = await Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => AddTransactionSheet(
-                                    transactionId: transactionId,
-                                    transactionData: data,
-                                  ),
-                                ),
-                              );
-                              if (result == true && context.mounted) {
-                                Navigator.of(context).pop();
-                              }
-                            },
-                          ),
-                          IconButton(
-                            icon: Icon(Icons.delete, color: Colors.white),
-                            onPressed: () {
-                              showDialog(
-                                context: context,
-                                builder: (ctx) => AlertDialog(
-                                  title: Text('Ștergi tranzacția?'),
-                                  content: Text(
-                                    'Această acțiune este ireversibilă.',
-                                  ),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.of(ctx).pop(),
-                                      child: Text('Anulează'),
-                                    ),
-                                    TextButton(
-                                      onPressed: () {
-                                        firestoreService.deleteExpense(
-                                          transactionId,
-                                        );
-                                        Navigator.of(ctx).pop();
-                                        Navigator.of(context).pop();
-                                      },
-                                      child: Text(
-                                        'Șterge',
-                                        style: TextStyle(color: Colors.red),
+
+                      // Meniu (3 puncte)
+                      IconButton(
+                        icon: const Icon(Icons.more_horiz, color: Colors.white),
+                        onPressed: () {
+                          // Meniu opțiuni (Edit/Delete)
+                          showModalBottomSheet(
+                            context: context,
+                            builder: (ctx) => Wrap(
+                              children: [
+                                ListTile(
+                                  leading: const Icon(Icons.edit),
+                                  title: const Text('Editează'),
+                                  onTap: () async {
+                                    Navigator.pop(ctx);
+                                    final result = await Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            AddTransactionSheet(
+                                              transactionId: transactionId,
+                                              transactionData: data,
+                                            ),
                                       ),
-                                    ),
-                                  ],
+                                    );
+                                    if (result == true && context.mounted) {
+                                      Navigator.of(context).pop();
+                                    }
+                                  },
                                 ),
-                              );
-                            },
-                          ),
-                        ],
+                                ListTile(
+                                  leading: const Icon(
+                                    Icons.delete,
+                                    color: Colors.red,
+                                  ),
+                                  title: const Text(
+                                    'Șterge',
+                                    style: TextStyle(color: Colors.red),
+                                  ),
+                                  onTap: () {
+                                    Navigator.pop(ctx);
+                                    showDialog(
+                                      context: context,
+                                      builder: (dialogCtx) => AlertDialog(
+                                        title: const Text('Ștergi tranzacția?'),
+                                        content: const Text(
+                                          'Această acțiune este ireversibilă.',
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () =>
+                                                Navigator.of(dialogCtx).pop(),
+                                            child: const Text('Anulează'),
+                                          ),
+                                          TextButton(
+                                            onPressed: () {
+                                              firestoreService.deleteExpense(
+                                                transactionId,
+                                              );
+                                              Navigator.of(dialogCtx).pop();
+                                              Navigator.of(context).pop();
+                                            },
+                                            child: const Text(
+                                              'Șterge',
+                                              style: TextStyle(
+                                                color: Colors.red,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ],
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),
                 ),
+              ),
+            ),
+          ),
 
-                SizedBox(height: 20),
+          // --- 3. CONȚINUTUL PAGINII (CARDUL ALB) ---
+          Column(
+            children: [
+              // Am mărit acest spațiu pentru a coborî cardul alb mai jos,
+              // lăsând loc pentru titlul centrat
+              SizedBox(height: MediaQuery.of(context).padding.top + 130),
 
-                // --- 3. CARDUL PRINCIPAL ---
-                Expanded(
-                  child: Container(
-                    width: double.infinity,
-                    margin: EdgeInsets.symmetric(horizontal: 20),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surface,
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(30),
-                        topRight: Radius.circular(30),
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black12,
-                          blurRadius: 10,
-                          offset: Offset(0, -5),
-                        ),
-                      ],
+              // --- CARDUL ALB PRINCIPAL ---
+              Expanded(
+                child: Container(
+                  width: double.infinity,
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.only(
+                      topLeft: Radius.circular(30),
+                      topRight: Radius.circular(30),
                     ),
-                    child: SingleChildScrollView(
-                      padding: EdgeInsets.all(24),
-                      child: Column(
-                        children: [
-                          // A. Iconița Mare
-                          _buildBigTransactionIcon(data, isExpense),
-                          SizedBox(height: 16),
+                  ),
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 30,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        // 1. Iconița Brandului
+                        _buildBigTransactionIcon(data, isExpense),
 
-                          // B. Pilula cu Tipul (Venit/Cheltuială)
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: isExpense
-                                  ? const Color(0xff7b0828).withValues(alpha: 0.1)
-                                  : const Color(0xff2f7e79).withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              isExpense ? 'Cheltuială' : 'Venit',
-                              style: TextStyle(
-                                color: isExpense
-                                    ? const Color(0xff7b0828)
-                                    : const Color(0xff2f7e79),
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+                        const SizedBox(height: 10),
+
+                        // 2. Pilula cu Tipul
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
                           ),
-                          SizedBox(height: 10),
-
-                          // C. Suma Mare
-                          Text(
-                            '${isExpense ? '-' : '+'}${settings.currencySymbol}${amount.toStringAsFixed(2)}',
+                          decoration: BoxDecoration(
+                            color: statusColor.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            isExpense ? 'Cheltuială' : 'Venit',
                             style: TextStyle(
-                              fontSize: 36,
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(
-                                context,
-                              ).textTheme.bodyLarge?.color,
+                              color: statusColor,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
                             ),
                           ),
+                        ),
 
-                          SizedBox(height: 40),
+                        const SizedBox(height: 16),
 
-                          // D. Header "Transaction details"
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'Detalii Tranzacție',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                        // 3. Suma Mare
+                        Text(
+                          '${amount.toStringAsFixed(2)} ${settings.currencySymbol}',
+                          style: const TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
+                        ),
+
+                        const SizedBox(height: 30),
+
+                        // 4. Titlul Secțiunii
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: const [
+                            Text(
+                              'Detalii tranzacție',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black87,
                               ),
-                              Icon(Icons.keyboard_arrow_up, color: Colors.grey),
-                            ],
-                          ),
-                          SizedBox(height: 20),
-
-                          // E. Lista de Detalii
-                          _buildDetailRow(
-                            context,
-                            'Status',
-                            'Finalizat',
-                            textColor: isExpense
-                                ? const Color(0xff7b0828)
-                                : const Color(0xff2f7e79),
-                            isBold: true,
-                          ),
-
-                          // --- AICI E SCHIMBAREA: Numele Real ---
-                          Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 12.0),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  'Adăugat de',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    color: Colors.grey[600],
-                                  ),
-                                ),
-                                Flexible(
-                                  child: Align(
-                                    alignment: Alignment.centerRight,
-                                    child: FutureBuilder<String>(
-                                      future: _getUserName(
-                                        ownerUid,
-                                      ), // Căutăm numele în DB
-                                      builder: (context, snapshot) {
-                                        if (snapshot.connectionState ==
-                                            ConnectionState.waiting) {
-                                          return SizedBox(
-                                            width: 15,
-                                            height: 15,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                            ),
-                                          );
-                                        }
-                                        return Text(
-                                          snapshot.data ??
-                                              '...', // Afișăm numele real
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                ),
-                              ],
                             ),
-                          ),
+                            Icon(
+                              Icons.keyboard_arrow_up,
+                              color: Colors.black54,
+                            ),
+                          ],
+                        ),
 
-                          // --------------------------------------
-                          _buildDetailRow(context, 'Ora', formattedTime),
-                          _buildDetailRow(context, 'Data', formattedDate),
+                        const SizedBox(height: 10),
 
-                          SizedBox(height: 20),
-                          Divider(),
-                          SizedBox(height: 20),
+                        // 5. Lista de Detalii
+                        _buildDetailRow(
+                          'Status',
+                          isExpense ? 'Cheltuială' : 'Venit',
+                          valueColor: statusColor,
+                          isBold: true,
+                        ),
 
-                          // F. Total Footer
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'Total',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: Colors.grey[600],
-                                ),
+                        // --- ADAUGĂ ACEASTĂ LINIE AICI ---
+                        _buildDetailRow(
+                          'Descriere',
+                          data['description'] ?? '-',
+                          isBold: true,
+                        ),
+
+                        // ---------------------------------
+                        FutureBuilder<String>(
+                          future: _getUserName(ownerUid),
+                          builder: (context, snapshot) {
+                            String name = snapshot.data ?? '...';
+                            return _buildDetailRow(
+                              'Adăugat de',
+                              name,
+                              isBold: true,
+                            );
+                          },
+                        ),
+
+                        const SizedBox(height: 10),
+                        const Divider(color: Colors.black12, thickness: 1),
+                        const SizedBox(height: 10),
+
+                        _buildDetailRow('Ora', formattedTime, isBold: true),
+                        _buildDetailRow('Data', formattedDate, isBold: true),
+
+                        const SizedBox(height: 10),
+                        const Divider(color: Colors.black12, thickness: 1),
+                        const SizedBox(height: 10),
+
+                        // 6. Total
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'Total',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.black54,
                               ),
-                              Text(
-                                '${settings.currencySymbol}${amount.toStringAsFixed(2)}',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                            ),
+                            Text(
+                              '${amount.toStringAsFixed(2)} ${settings.currencySymbol}',
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black,
                               ),
-                            ],
-                          ),
-                          SizedBox(height: 30),
-                        ],
-                      ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 40),
+                      ],
                     ),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
+  // Helper pentru rândurile de detalii
   Widget _buildDetailRow(
-    BuildContext context,
     String label,
     String value, {
-    Color? textColor,
+    Color? valueColor,
     bool isBold = false,
   }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12.0),
+      padding: const EdgeInsets.symmetric(vertical: 10.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: TextStyle(fontSize: 16, color: Colors.grey[600])),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 16,
+              color: Colors.black54,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
           Text(
             value,
             style: TextStyle(
               fontSize: 16,
+              color: valueColor ?? Colors.black87,
               fontWeight: isBold ? FontWeight.bold : FontWeight.w500,
-              color: textColor ?? Theme.of(context).textTheme.bodyLarge?.color,
             ),
           ),
         ],
@@ -377,19 +398,20 @@ class TransactionDetailsPage extends StatelessWidget {
   }
 }
 
+// Clasa pentru forma curbată de jos a imaginii
 class _TopCurveClipper extends CustomClipper<Path> {
   @override
   Path getClip(Size size) {
     Path path = Path();
-    path.lineTo(0, size.height - 80);
+    path.lineTo(0, size.height - 80); // Începe din stânga jos (mai sus cu 80px)
     path.quadraticBezierTo(
-      size.width / 2,
-      size.height,
-      size.width,
-      size.height - 80,
+      size.width / 2, // Punctul de control (mijloc)
+      size.height, // Maximul de jos al curbei
+      size.width, // Punctul final (dreapta)
+      size.height - 80, // Dreapta jos (mai sus cu 80px)
     );
-    path.lineTo(size.width, 0);
-    path.close();
+    path.lineTo(size.width, 0); // Dreapta sus
+    path.close(); // Închide sus
     return path;
   }
 

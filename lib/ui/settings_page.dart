@@ -174,7 +174,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
       // Afișează feedback pozitiv
       if (!mounted) return;
-      if (sentryId != null && sentryId.toString().isNotEmpty) {
+      if (sentryId.toString().isNotEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('✓ Mesaj trimis cu succes!\nEvent ID: $sentryId'),
