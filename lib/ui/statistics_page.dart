@@ -313,7 +313,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                               data['category'] ?? 'Fără categorie',
                             ),
                             trailing: Text(
-                              '${isExpense ? '-' : '+'}${settings.currencySymbol}${(data['amount'] ?? 0.0).toStringAsFixed(2)}',
+                              '${(data['amount'] ?? 0.0).toStringAsFixed(2)} ${settings.currencySymbol}',
                               style: TextStyle(
                                 color: isExpense
                                     ? const Color(0xff7b0828)
