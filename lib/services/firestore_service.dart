@@ -385,9 +385,9 @@ class FirestoreService {
         .asyncMap((userDoc) {
           if (!userDoc.exists) return Stream<QuerySnapshot>.empty();
           final String householdId = userDoc.get('householdId');
+          // Fără orderBy ca să nu fie nevoie de index compus; sortare în UI.
           return recurringTransactions
               .where('householdId', isEqualTo: householdId)
-              .orderBy('nextRunAt')
               .snapshots();
         })
         .asyncExpand((stream) => stream);

@@ -79,9 +79,9 @@ class _RecurringTransactionsPageState extends State<RecurringTransactionsPage> {
 
     await _firestoreService.deleteRecurringTransaction(doc.id);
     if (!mounted) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Recurrența a fost ștearsă.')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Recurrența a fost ștearsă.')),
+    );
   }
 
   @override
@@ -124,12 +124,22 @@ class _RecurringTransactionsPageState extends State<RecurringTransactionsPage> {
               child: Text('Nu ai recurențe. Apasă + ca să adaugi.'),
             );
           }
+          // Sortare după nextRunAt (query-ul nu folosește orderBy ca să evite index compus).
+          final sorted = List<QueryDocumentSnapshot>.from(docs)
+            ..sort((a, b) {
+              final aNext = (a.data() as Map<String, dynamic>)['nextRunAt'] as Timestamp?;
+              final bNext = (b.data() as Map<String, dynamic>)['nextRunAt'] as Timestamp?;
+              if (aNext == null && bNext == null) return 0;
+              if (aNext == null) return 1;
+              if (bNext == null) return -1;
+              return aNext.compareTo(bNext);
+            });
 
           return ListView.builder(
             padding: const EdgeInsets.all(12),
-            itemCount: docs.length,
+            itemCount: sorted.length,
             itemBuilder: (context, index) {
-              final doc = docs[index];
+              final doc = sorted[index];
               final data = doc.data() as Map<String, dynamic>;
 
               final description = (data['description'] ?? '').toString();
@@ -225,7 +235,7 @@ class _RecurringTransactionsPageState extends State<RecurringTransactionsPage> {
                                                 .toDate(),
                                         active: v,
                                       );
-                                  setState(() {});
+                                  if (mounted) setState(() {});
                                 },
                               ),
                               IconButton(
