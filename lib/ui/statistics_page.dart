@@ -7,7 +7,9 @@ import 'package:provider/provider.dart';
 import 'package:expense_tracker_nou/providers/settings_provider.dart';
 
 class StatisticsPage extends StatefulWidget {
-  const StatisticsPage({super.key});
+  final VoidCallback? onBackTap;
+
+  const StatisticsPage({super.key, this.onBackTap});
 
   @override
   State<StatisticsPage> createState() => _StatisticsPageState();
@@ -15,12 +17,31 @@ class StatisticsPage extends StatefulWidget {
 
 class _StatisticsPageState extends State<StatisticsPage> {
   final FirestoreService _firestoreService = FirestoreService();
-  DateTime _currentDisplayDate = DateTime.now();
-  int _selectedPeriodIndex = 2; // 0=Ziua, 1=Săpt, 2=Luna, 3=Anul
-  final List<String> _periods = ['Ziua', 'Săpt', 'Luna', 'Anul'];
-  String _selectedType = 'expense'; // 'expense' sau 'income'
+  final ScrollController _scrollController = ScrollController();
 
-  // --- FUNCȚII HELPER PENTRU LOGICĂ ---
+  DateTime _currentDisplayDate = DateTime.now();
+  // 0=Ziua, 1=Săpt, 2=Luna (care afișează lunile anului)
+  int _selectedPeriodIndex = 2;
+  final List<String> _periods = ['Ziua', 'Săpt', 'Luna'];
+  String _selectedType = 'expense';
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollToEnd();
+    });
+  }
+
+  void _scrollToEnd() {
+    // Scrollăm la final pentru Ziua (ore) sau Luna (lunile anului)
+    if (_scrollController.hasClients &&
+        (_selectedPeriodIndex == 0 || _selectedPeriodIndex == 2)) {
+      _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
+    }
+  }
+
+  // --- FUNCȚII HELPER ---
   List<QueryDocumentSnapshot> _filterTransactionsByPeriod(
     List<QueryDocumentSnapshot> allTransactions,
     int periodIndex,
@@ -39,17 +60,13 @@ class _StatisticsPageState extends State<StatisticsPage> {
         startDate = DateTime(startDate.year, startDate.month, startDate.day);
         endDate = startDate.add(Duration(days: 7));
         break;
-      case 2: // Luna
-        startDate = DateTime(now.year, now.month, 1);
-        endDate = DateTime(now.year, now.month + 1, 1);
-        break;
-      case 3: // Anul
+      case 2: // Luna (De fapt, aici vrem să vedem tot anul curent pentru a afișa lunile)
         startDate = DateTime(now.year, 1, 1);
         endDate = DateTime(now.year + 1, 1, 1);
         break;
       default:
-        startDate = DateTime(now.year, now.month, 1);
-        endDate = DateTime(now.year, now.month + 1, 1);
+        startDate = DateTime(now.year, 1, 1);
+        endDate = DateTime(now.year + 1, 1, 1);
     }
 
     return allTransactions.where((doc) {
@@ -78,7 +95,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
       } else if (periodIndex == 1) {
         key = date.weekday;
       } else {
-        key = date.month;
+        key = date.month; // Aici folosim luna (1-12) ca cheie
       }
       totals[key] = (totals[key] ?? 0) + amount;
     }
@@ -88,249 +105,345 @@ class _StatisticsPageState extends State<StatisticsPage> {
   @override
   Widget build(BuildContext context) {
     final settings = Provider.of<SettingsProvider>(context);
+    final Color primaryGreen = const Color(0xff2f7e79);
 
     return Scaffold(
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(80.0),
-        child: AppBar(
-          centerTitle: true,
-          title: const Padding(
-            padding: EdgeInsets.only(top: 20.0),
-            child: Text(
-              'Statistici',
-              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-            ),
-          ),
-          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          elevation: 0,
-        ),
-      ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: _firestoreService.getExpensesStream(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(child: Text('A apărut o eroare: ${snapshot.error}'));
-          }
-          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return Center(child: Text('Nicio tranzacție de analizat.'));
-          }
-
-          var allTransactions = snapshot.data!.docs;
-
-          // LOGICA DE FILTRARE
-          var periodFilteredTransactions = _filterTransactionsByPeriod(
-            allTransactions,
-            _selectedPeriodIndex,
-          );
-          var typeFilteredTransactions = periodFilteredTransactions.where((
-            doc,
-          ) {
-            var data = doc.data() as Map<String, dynamic>;
-            return data['type'] == _selectedType;
-          }).toList();
-          var sortedTransactions = List<QueryDocumentSnapshot>.from(
-            typeFilteredTransactions,
-          );
-          sortedTransactions.sort((a, b) {
-            double amountA =
-                (a.data() as Map<String, dynamic>)['amount'] ?? 0.0;
-            double amountB =
-                (b.data() as Map<String, dynamic>)['amount'] ?? 0.0;
-            return amountB.compareTo(amountA);
-          });
-
-          Map<int, double> chartTotals = _calculateChartTotals(
-            typeFilteredTransactions,
-            _selectedPeriodIndex,
-          );
-          List<FlSpot> spots = chartTotals.entries.map((entry) {
-            return FlSpot(entry.key.toDouble(), entry.value);
-          }).toList();
-          spots.sort((a, b) => a.x.compareTo(b.x));
-          double maxY = 0;
-          if (spots.isNotEmpty) {
-            maxY =
-                spots.map((spot) => spot.y).reduce((a, b) => a > b ? a : b) *
-                1.2;
-          }
-          if (maxY == 0) maxY = 10;
-
-          return SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+      backgroundColor: Colors.grey[50],
+      body: SafeArea(
+        child: Column(
+          children: [
+            // --- HEADER ---
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // SELECTOR PERIOADĂ
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: List.generate(4, (index) {
-                      bool isSelected = _selectedPeriodIndex == index;
-                      return GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _selectedPeriodIndex = index;
-                            _currentDisplayDate = DateTime.now();
-                          });
-                        },
-                        child: Container(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 25,
-                            vertical: 15,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? Theme.of(context).colorScheme.primary
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(10.0),
-                          ),
-                          child: Text(
-                            _periods[index],
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: isSelected
-                                  ? Colors.white
-                                  : Colors.grey[600],
-                              fontSize: 16,
-                            ),
-                          ),
-                        ),
-                      );
-                    }),
+                  IconButton(
+                    icon: const Icon(
+                      Icons.arrow_back_ios_new,
+                      color: Colors.black,
+                      size: 22,
+                    ),
+                    onPressed: () {
+                      if (widget.onBackTap != null) {
+                        widget.onBackTap!(); // Mergi la Home (Tab 0)
+                      } else {
+                        Navigator.of(context).pop(); // Fallback
+                      }
+                    },
                   ),
-
-                  SizedBox(height: 16),
-
-                  // --- FILTRUL (Cheltuieli / Venituri) STILIZAT (Tip "Pilulă") ---
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 25.0,
-                        vertical: 2.0,
-                      ),
-                      decoration: BoxDecoration(
-                        // Fundal Verde (pentru a semăna cu celălalt, dar vizibil pe alb)
-                        color: Theme.of(context).colorScheme.primary,
-                        borderRadius: BorderRadius.circular(
-                          20.0,
-                        ), // Colțuri mai rotunjite (Pilulă)
-                        // Fără border sau un border subtil
-                      ),
-                      child: DropdownButtonHideUnderline(
-                        child: DropdownButton<String>(
-                          value: _selectedType,
-                          dropdownColor: Theme.of(
-                            context,
-                          ).colorScheme.primary, // Lista verde când se deschide
-                          icon: const Icon(
-                            Icons.keyboard_arrow_down,
-                            color: Colors.white,
-                          ), // Săgeată albă
-                          style: const TextStyle(
-                            color: Colors.white, // Text alb
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14, // Font compact
-                          ),
-                          items: [
-                            DropdownMenuItem(
-                              value: 'expense',
-                              child: Text('Cheltuieli'),
-                            ),
-                            DropdownMenuItem(
-                              value: 'income',
-                              child: Text('Venituri'),
-                            ),
-                          ],
-                          onChanged: (String? newValue) {
-                            setState(() {
-                              _selectedType = newValue!;
-                            });
-                          },
-                        ),
-                      ),
+                  const Text(
+                    'Statistici',
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 22,
                     ),
                   ),
-
-                  // --- SFÂRȘIT MODIFICARE ---
-                  SizedBox(height: 20),
-
-                  // GRAFIC
-                  SizedBox(
-                    height: 250,
-                    child: _buildLineChart(spots, maxY, _selectedPeriodIndex),
-                  ),
-                  SizedBox(height: 30),
-
-                  // LISTA TOP
-                  Text(
-                    _selectedType == 'expense'
-                        ? 'Top Cheltuieli'
-                        : 'Top Venituri',
-                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-                  ),
-                  SizedBox(height: 10),
-
-                  if (typeFilteredTransactions.isEmpty)
-                    Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(20.0),
-                        child: Text(
-                          'Nicio tranzacție de acest tip în această perioadă.',
-                        ),
-                      ),
-                    )
-                  else
-                    ListView.builder(
-                      itemCount: sortedTransactions.length > 5
-                          ? 5
-                          : sortedTransactions.length,
-                      shrinkWrap: true,
-                      physics: NeverScrollableScrollPhysics(),
-                      itemBuilder: (context, index) {
-                        var doc = sortedTransactions[index];
-                        var data = doc.data() as Map<String, dynamic>;
-
-                        // Calculăm dacă e cheltuială
-                        bool isExpense =
-                            (data['type'] ?? 'expense') == 'expense';
-
-                        return Card(
-                          elevation: 2,
-                          margin: EdgeInsets.symmetric(vertical: 6),
-                          child: ListTile(
-                            // --- AICI FOLOSIM LOGICA NOUĂ PENTRU ICONIȚĂ ---
-                            leading: _buildTransactionLeading(data, isExpense),
-                            // ----------------------------------------------
-                            title: Text(
-                              data['description'] ?? 'N/A',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            subtitle: Text(
-                              data['category'] ?? 'Fără categorie',
-                            ),
-                            trailing: Text(
-                              '${(data['amount'] ?? 0.0).toStringAsFixed(2)} ${settings.currencySymbol}',
-                              style: TextStyle(
-                                color: isExpense
-                                    ? const Color(0xff7b0828)
-                                    : const Color(0xff2f7e79),
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
+                  const SizedBox(width: 48),
                 ],
               ),
             ),
-          );
-        },
+
+            Expanded(
+              child: StreamBuilder<QuerySnapshot>(
+                stream: _firestoreService.getExpensesStream(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (snapshot.hasError) {
+                    return Center(child: Text('Eroare: ${snapshot.error}'));
+                  }
+                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                    return const Center(child: Text('Nicio tranzacție.'));
+                  }
+
+                  var allTransactions = snapshot.data!.docs;
+                  var periodFilteredTransactions = _filterTransactionsByPeriod(
+                    allTransactions,
+                    _selectedPeriodIndex,
+                  );
+                  var typeFilteredTransactions = periodFilteredTransactions
+                      .where((doc) {
+                        var data = doc.data() as Map<String, dynamic>;
+                        return data['type'] == _selectedType;
+                      })
+                      .toList();
+                  var sortedTransactions = List<QueryDocumentSnapshot>.from(
+                    typeFilteredTransactions,
+                  );
+                  sortedTransactions.sort((a, b) {
+                    double amountA =
+                        (a.data() as Map<String, dynamic>)['amount'] ?? 0.0;
+                    double amountB =
+                        (b.data() as Map<String, dynamic>)['amount'] ?? 0.0;
+                    return amountB.compareTo(amountA);
+                  });
+
+                  Map<int, double> chartTotals = _calculateChartTotals(
+                    typeFilteredTransactions,
+                    _selectedPeriodIndex,
+                  );
+                  List<FlSpot> spots = chartTotals.entries.map((entry) {
+                    return FlSpot(entry.key.toDouble(), entry.value);
+                  }).toList();
+                  spots.sort((a, b) => a.x.compareTo(b.x));
+
+                  double maxY = 0;
+                  if (spots.isNotEmpty) {
+                    maxY =
+                        spots
+                            .map((spot) => spot.y)
+                            .reduce((a, b) => a > b ? a : b) *
+                        1.2;
+                  }
+                  if (maxY == 0) maxY = 10;
+
+                  return SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          // --- SELECTOR PERIOADĂ ---
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            children: List.generate(_periods.length, (index) {
+                              bool isSelected = _selectedPeriodIndex == index;
+                              return GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    _selectedPeriodIndex = index;
+                                    _currentDisplayDate = DateTime.now();
+                                  });
+                                  WidgetsBinding.instance.addPostFrameCallback((
+                                    _,
+                                  ) {
+                                    _scrollToEnd();
+                                  });
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 30,
+                                    vertical: 13,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: isSelected
+                                        ? primaryGreen
+                                        : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(15.0),
+                                  ),
+                                  child: Text(
+                                    _periods[index],
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: isSelected
+                                          ? Colors.white
+                                          : Colors.grey[600],
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }),
+                          ),
+
+                          const SizedBox(height: 20),
+
+                          // --- DROPDOWN SIMPLU ---
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: Container(
+                              height: 45,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(25),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.grey.withValues(alpha: 0.15),
+                                    spreadRadius: 2,
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
+                              ),
+                              child: DropdownButtonHideUnderline(
+                                child: DropdownButton<String>(
+                                  value: _selectedType,
+                                  dropdownColor: Colors.white,
+                                  borderRadius: BorderRadius.circular(20),
+                                  icon: Padding(
+                                    padding: const EdgeInsets.only(left: 8.0),
+                                    child: const Icon(
+                                      Icons.keyboard_arrow_down_rounded,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                  style: const TextStyle(
+                                    color: Colors.black87,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15,
+                                  ),
+                                  items: [
+                                    DropdownMenuItem(
+                                      value: 'expense',
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: const [Text('Cheltuieli')],
+                                      ),
+                                    ),
+                                    DropdownMenuItem(
+                                      value: 'income',
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: const [Text('Venituri')],
+                                      ),
+                                    ),
+                                  ],
+                                  onChanged: (String? newValue) {
+                                    setState(() {
+                                      _selectedType = newValue!;
+                                    });
+                                  },
+                                ),
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(height: 25),
+
+                          // --- GRAFIC SCROLLABIL ---
+                          LayoutBuilder(
+                            builder: (context, constraints) {
+                              double chartWidth = constraints.maxWidth;
+                              // Dacă e "Luna" (index 2), lățime dublă pentru lunile anului (1-12)
+                              if (_selectedPeriodIndex == 2) {
+                                chartWidth = constraints.maxWidth * 2;
+                              } else if (_selectedPeriodIndex == 0) {
+                                // Ziua (ore)
+                                chartWidth = constraints.maxWidth * 1.5;
+                              }
+
+                              return SingleChildScrollView(
+                                controller: _scrollController,
+                                scrollDirection: Axis.horizontal,
+                                physics: const ClampingScrollPhysics(),
+                                child: Container(
+                                  width: chartWidth,
+                                  height: 250,
+                                  padding: const EdgeInsets.only(right: 20),
+                                  child: _buildLineChart(
+                                    spots,
+                                    maxY,
+                                    _selectedPeriodIndex,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+
+                          const SizedBox(height: 30),
+
+                          // --- TITLU LISTĂ ---
+                          Text(
+                            _selectedType == 'expense'
+                                ? 'Top Cheltuieli'
+                                : 'Top Venituri',
+                            style: const TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+
+                          // --- LISTA TRANZACȚII ---
+                          if (typeFilteredTransactions.isEmpty)
+                            const Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(20.0),
+                                child: Text(
+                                  'Nicio tranzacție de acest tip în această perioadă.',
+                                  style: TextStyle(color: Colors.grey),
+                                ),
+                              ),
+                            )
+                          else
+                            ListView.builder(
+                              itemCount: sortedTransactions.length > 5
+                                  ? 5
+                                  : sortedTransactions.length,
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemBuilder: (context, index) {
+                                var doc = sortedTransactions[index];
+                                var data = doc.data() as Map<String, dynamic>;
+                                bool isExpense =
+                                    (data['type'] ?? 'expense') == 'expense';
+
+                                return Card(
+                                  color: Colors.white,
+                                  elevation: 2,
+                                  shadowColor: Colors.grey.shade200,
+                                  margin: const EdgeInsets.symmetric(
+                                    vertical: 8,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(15),
+                                  ),
+                                  child: ListTile(
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 4,
+                                    ),
+                                    leading: _buildTransactionLeading(
+                                      data,
+                                      isExpense,
+                                    ),
+                                    title: Text(
+                                      data['description'] ?? 'N/A',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                    subtitle: Padding(
+                                      padding: const EdgeInsets.only(top: 4.0),
+                                      child: Text(
+                                        data['category'] ?? 'Fără categorie',
+                                        style: TextStyle(
+                                          color: Colors.grey[600],
+                                        ),
+                                      ),
+                                    ),
+                                    trailing: Text(
+                                      '${(data['amount'] ?? 0.0).toStringAsFixed(2)} ${settings.currencySymbol}',
+                                      style: TextStyle(
+                                        color: isExpense
+                                            ? const Color(0xff7b0828)
+                                            : const Color(0xff2f7e79),
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          const SizedBox(height: 30),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -348,35 +461,41 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
   Widget _buildLineChart(List<FlSpot> spots, double maxY, int periodIndex) {
     if (spots.isEmpty) {
-      return Center(child: Text('Date insuficiente pentru grafic.'));
+      return const Center(child: Text('Date insuficiente pentru grafic.'));
     }
     double minX, maxX;
     switch (periodIndex) {
-      case 0:
+      case 0: // Ziua (0-23 ore)
         minX = 0;
         maxX = 23;
         break;
-      case 1:
+      case 1: // Săpt (1-7 zile)
         minX = 1;
         maxX = 7;
         break;
-      default:
+      default: // Luna (1-12 luni)
         minX = 1;
         maxX = 12;
     }
     return LineChart(
       LineChartData(
-        gridData: FlGridData(show: false),
+        gridData: const FlGridData(show: false),
         titlesData: FlTitlesData(
           show: true,
-          topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          rightTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
+          leftTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false),
+          ),
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
               reservedSize: 30,
-              interval: 1,
+              interval: 1, // Arătăm fiecare lună
               getTitlesWidget: (value, meta) =>
                   _buildBottomAxisTitles(value, meta, periodIndex),
             ),
@@ -390,7 +509,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
             color: Theme.of(context).colorScheme.primary,
             barWidth: 4,
             isStrokeCapRound: true,
-            dotData: FlDotData(show: true),
+            dotData: const FlDotData(show: true),
             belowBarData: BarAreaData(
               show: true,
               gradient: LinearGradient(
@@ -420,10 +539,10 @@ class _StatisticsPageState extends State<StatisticsPage> {
     );
     String text;
     switch (periodIndex) {
-      case 0:
+      case 0: // Ziua
         text = value.toInt() % 6 == 0 ? '${value.toInt()}h' : '';
         break;
-      case 1:
+      case 1: // Săptămâna
         switch (value.toInt()) {
           case 1:
             text = 'L';
@@ -450,7 +569,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
             text = '';
         }
         break;
-      default:
+      default: // Luna (afisează lunile anului)
         switch (value.toInt()) {
           case 1:
             text = 'Ian';

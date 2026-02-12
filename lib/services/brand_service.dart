@@ -44,8 +44,8 @@ class BrandService {
       padding: EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: isExpense
-            ? const Color(0xff7b0828).withOpacity(0.1) // Roșu pal
-            : const Color(0xff2f7e79).withOpacity(0.1), // Verde pal
+            ? const Color(0xff7b0828).withValues(alpha: 0.1) // Roșu pal
+            : const Color(0xff2f7e79).withValues(alpha: 0.1), // Verde pal
         shape: BoxShape.circle,
       ),
       child: Icon(
@@ -77,8 +77,8 @@ class BrandService {
       width: 80,
       decoration: BoxDecoration(
         color: isExpense
-            ? const Color(0xff7b0828).withOpacity(0.1)
-            : const Color(0xff2f7e79).withOpacity(0.1),
+            ? const Color(0xff7b0828).withValues(alpha: 0.1)
+            : const Color(0xff2f7e79).withValues(alpha: 0.1),
         shape: BoxShape.circle,
       ),
       child: Icon(
