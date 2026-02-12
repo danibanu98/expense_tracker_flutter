@@ -158,7 +158,7 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _testSentry() async {
     try {
-      print('[DEBUG] Sentry Test: Inițiator test mesaj...');
+      debugPrint('[DEBUG] Sentry Test: Inițiator test mesaj...');
 
       // Capturează un mesaj cu nivel informational
       final sentryId = await Sentry.captureMessage(
@@ -170,7 +170,7 @@ class _SettingsPageState extends State<SettingsPage> {
         },
       );
 
-      print('[DEBUG] Sentry sentryId: $sentryId');
+      debugPrint('[DEBUG] Sentry sentryId: $sentryId');
 
       // Afișează feedback pozitiv
       if (!mounted) return;
@@ -195,8 +195,8 @@ class _SettingsPageState extends State<SettingsPage> {
         );
       }
     } catch (e, stackTrace) {
-      print('[ERROR] Sentry Test: $e');
-      print('[ERROR] StackTrace: $stackTrace');
+      debugPrint('[ERROR] Sentry Test: $e');
+      debugPrint('[ERROR] StackTrace: $stackTrace');
 
       // Afișează eroare dacă testul eșuează
       if (!mounted) return;

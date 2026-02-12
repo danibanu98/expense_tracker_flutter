@@ -20,9 +20,8 @@ class _StatisticsPageState extends State<StatisticsPage> {
   final ScrollController _scrollController = ScrollController();
 
   DateTime _currentDisplayDate = DateTime.now();
-  // 0=Ziua, 1=Săpt, 2=Luna (care afișează lunile anului)
-  int _selectedPeriodIndex = 2;
-  final List<String> _periods = ['Ziua', 'Săpt', 'Luna'];
+  int _selectedPeriodIndex = 2; // 0=Ziua, 1=Săptămâna, 2=Lună
+  final List<String> _periods = ['Ziua', 'Săptămâna', 'Lună'];
   String _selectedType = 'expense';
 
   @override
@@ -34,7 +33,6 @@ class _StatisticsPageState extends State<StatisticsPage> {
   }
 
   void _scrollToEnd() {
-    // Scrollăm la final pentru Ziua (ore) sau Luna (lunile anului)
     if (_scrollController.hasClients &&
         (_selectedPeriodIndex == 0 || _selectedPeriodIndex == 2)) {
       _scrollController.jumpTo(_scrollController.position.maxScrollExtent);
@@ -60,7 +58,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
         startDate = DateTime(startDate.year, startDate.month, startDate.day);
         endDate = startDate.add(Duration(days: 7));
         break;
-      case 2: // Luna (De fapt, aici vrem să vedem tot anul curent pentru a afișa lunile)
+      case 2: // Luna (Tot anul)
         startDate = DateTime(now.year, 1, 1);
         endDate = DateTime(now.year + 1, 1, 1);
         break;
@@ -95,7 +93,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
       } else if (periodIndex == 1) {
         key = date.weekday;
       } else {
-        key = date.month; // Aici folosim luna (1-12) ca cheie
+        key = date.month;
       }
       totals[key] = (totals[key] ?? 0) + amount;
     }
@@ -107,8 +105,29 @@ class _StatisticsPageState extends State<StatisticsPage> {
     final settings = Provider.of<SettingsProvider>(context);
     final Color primaryGreen = const Color(0xff2f7e79);
 
+    // --- LOGICA PENTRU TEMĂ ---
+    final bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    // Culori dinamice
+    final Color backgroundColor = isDarkMode
+        ? const Color(0xff121212)
+        : Colors.grey[50]!;
+    final Color cardColor = isDarkMode ? const Color(0xff1E1E1E) : Colors.white;
+    final Color textColor = isDarkMode ? Colors.white : Colors.black;
+    final Color subTextColor = isDarkMode
+        ? Colors.grey[400]!
+        : Colors.grey[600]!;
+    final Color borderColor = isDarkMode
+        ? Colors.grey[800]!
+        : Colors.grey[300]!;
+
+    // --- AICI ESTE DEFINIȚIA CARE LIPSEA ---
+    final Color shadowColor = isDarkMode
+        ? Colors.black.withValues(alpha: 0.5)
+        : Colors.grey.withValues(alpha: 0.15);
+
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: backgroundColor,
       body: SafeArea(
         child: Column(
           children: [
@@ -119,23 +138,23 @@ class _StatisticsPageState extends State<StatisticsPage> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   IconButton(
-                    icon: const Icon(
+                    icon: Icon(
                       Icons.arrow_back_ios_new,
-                      color: Colors.black,
+                      color: textColor,
                       size: 22,
                     ),
                     onPressed: () {
                       if (widget.onBackTap != null) {
-                        widget.onBackTap!(); // Mergi la Home (Tab 0)
+                        widget.onBackTap!();
                       } else {
-                        Navigator.of(context).pop(); // Fallback
+                        Navigator.of(context).pop();
                       }
                     },
                   ),
-                  const Text(
+                  Text(
                     'Statistici',
                     style: TextStyle(
-                      color: Colors.black,
+                      color: textColor,
                       fontWeight: FontWeight.bold,
                       fontSize: 22,
                     ),
@@ -153,10 +172,20 @@ class _StatisticsPageState extends State<StatisticsPage> {
                     return const Center(child: CircularProgressIndicator());
                   }
                   if (snapshot.hasError) {
-                    return Center(child: Text('Eroare: ${snapshot.error}'));
+                    return Center(
+                      child: Text(
+                        'Eroare: ${snapshot.error}',
+                        style: TextStyle(color: textColor),
+                      ),
+                    );
                   }
                   if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                    return const Center(child: Text('Nicio tranzacție.'));
+                    return Center(
+                      child: Text(
+                        'Nicio tranzacție.',
+                        style: TextStyle(color: textColor),
+                      ),
+                    );
                   }
 
                   var allTransactions = snapshot.data!.docs;
@@ -240,7 +269,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
                                       fontWeight: FontWeight.bold,
                                       color: isSelected
                                           ? Colors.white
-                                          : Colors.grey[600],
+                                          : subTextColor,
                                       fontSize: 15,
                                     ),
                                   ),
@@ -251,7 +280,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
 
                           const SizedBox(height: 20),
 
-                          // --- DROPDOWN SIMPLU ---
+                          // --- DROPDOWN TIP (STIL NOU, ADAPTABIL) ---
                           Align(
                             alignment: Alignment.centerRight,
                             child: Container(
@@ -260,11 +289,15 @@ class _StatisticsPageState extends State<StatisticsPage> {
                                 horizontal: 16,
                               ),
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: cardColor,
+                                border: Border.all(
+                                  color: borderColor,
+                                ), // Folosim borderColor aici
                                 borderRadius: BorderRadius.circular(25),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.grey.withValues(alpha: 0.15),
+                                    color:
+                                        shadowColor, // Folosim shadowColor definită sus
                                     spreadRadius: 2,
                                     blurRadius: 8,
                                     offset: const Offset(0, 3),
@@ -274,17 +307,17 @@ class _StatisticsPageState extends State<StatisticsPage> {
                               child: DropdownButtonHideUnderline(
                                 child: DropdownButton<String>(
                                   value: _selectedType,
-                                  dropdownColor: Colors.white,
+                                  dropdownColor: cardColor,
                                   borderRadius: BorderRadius.circular(20),
                                   icon: Padding(
                                     padding: const EdgeInsets.only(left: 8.0),
-                                    child: const Icon(
+                                    child: Icon(
                                       Icons.keyboard_arrow_down_rounded,
-                                      color: Colors.black87,
+                                      color: textColor,
                                     ),
                                   ),
-                                  style: const TextStyle(
-                                    color: Colors.black87,
+                                  style: TextStyle(
+                                    color: textColor,
                                     fontWeight: FontWeight.bold,
                                     fontSize: 15,
                                   ),
@@ -320,11 +353,9 @@ class _StatisticsPageState extends State<StatisticsPage> {
                           LayoutBuilder(
                             builder: (context, constraints) {
                               double chartWidth = constraints.maxWidth;
-                              // Dacă e "Luna" (index 2), lățime dublă pentru lunile anului (1-12)
                               if (_selectedPeriodIndex == 2) {
                                 chartWidth = constraints.maxWidth * 2;
                               } else if (_selectedPeriodIndex == 0) {
-                                // Ziua (ore)
                                 chartWidth = constraints.maxWidth * 1.5;
                               }
 
@@ -353,22 +384,22 @@ class _StatisticsPageState extends State<StatisticsPage> {
                             _selectedType == 'expense'
                                 ? 'Top Cheltuieli'
                                 : 'Top Venituri',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 22,
                               fontWeight: FontWeight.bold,
-                              color: Colors.black,
+                              color: textColor,
                             ),
                           ),
                           const SizedBox(height: 10),
 
                           // --- LISTA TRANZACȚII ---
                           if (typeFilteredTransactions.isEmpty)
-                            const Center(
+                            Center(
                               child: Padding(
-                                padding: EdgeInsets.all(20.0),
+                                padding: const EdgeInsets.all(20.0),
                                 child: Text(
                                   'Nicio tranzacție de acest tip în această perioadă.',
-                                  style: TextStyle(color: Colors.grey),
+                                  style: TextStyle(color: subTextColor),
                                 ),
                               ),
                             )
@@ -386,9 +417,11 @@ class _StatisticsPageState extends State<StatisticsPage> {
                                     (data['type'] ?? 'expense') == 'expense';
 
                                 return Card(
-                                  color: Colors.white,
+                                  color: cardColor,
                                   elevation: 2,
-                                  shadowColor: Colors.grey.shade200,
+                                  shadowColor: isDarkMode
+                                      ? Colors.black
+                                      : Colors.grey.shade200,
                                   margin: const EdgeInsets.symmetric(
                                     vertical: 8,
                                   ),
@@ -406,18 +439,17 @@ class _StatisticsPageState extends State<StatisticsPage> {
                                     ),
                                     title: Text(
                                       data['description'] ?? 'N/A',
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontWeight: FontWeight.bold,
                                         fontSize: 16,
+                                        color: textColor,
                                       ),
                                     ),
                                     subtitle: Padding(
                                       padding: const EdgeInsets.only(top: 4.0),
                                       child: Text(
                                         data['category'] ?? 'Fără categorie',
-                                        style: TextStyle(
-                                          color: Colors.grey[600],
-                                        ),
+                                        style: TextStyle(color: subTextColor),
                                       ),
                                     ),
                                     trailing: Text(
@@ -465,15 +497,15 @@ class _StatisticsPageState extends State<StatisticsPage> {
     }
     double minX, maxX;
     switch (periodIndex) {
-      case 0: // Ziua (0-23 ore)
+      case 0:
         minX = 0;
         maxX = 23;
         break;
-      case 1: // Săpt (1-7 zile)
+      case 1:
         minX = 1;
         maxX = 7;
         break;
-      default: // Luna (1-12 luni)
+      default:
         minX = 1;
         maxX = 12;
     }
@@ -495,7 +527,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
             sideTitles: SideTitles(
               showTitles: true,
               reservedSize: 30,
-              interval: 1, // Arătăm fiecare lună
+              interval: 1,
               getTitlesWidget: (value, meta) =>
                   _buildBottomAxisTitles(value, meta, periodIndex),
             ),
@@ -532,8 +564,13 @@ class _StatisticsPageState extends State<StatisticsPage> {
   }
 
   Widget _buildBottomAxisTitles(double value, TitleMeta meta, int periodIndex) {
-    const style = TextStyle(
-      color: Colors.grey,
+    // Culoare adaptabilă pentru axa X
+    final color = Theme.of(context).brightness == Brightness.dark
+        ? Colors.grey[400]
+        : Colors.grey;
+
+    final style = TextStyle(
+      color: color,
       fontWeight: FontWeight.bold,
       fontSize: 12,
     );
@@ -569,7 +606,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
             text = '';
         }
         break;
-      default: // Luna (afisează lunile anului)
+      default: // Luna
         switch (value.toInt()) {
           case 1:
             text = 'Ian';
