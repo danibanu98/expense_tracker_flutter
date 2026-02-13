@@ -8,7 +8,8 @@ import 'package:provider/provider.dart';
 import 'package:expense_tracker_nou/providers/settings_provider.dart';
 
 class WalletPage extends StatefulWidget {
-  const WalletPage({super.key});
+  final VoidCallback? onBackTap;
+  const WalletPage({super.key, this.onBackTap});
 
   @override
   State<WalletPage> createState() => _WalletPageState();
@@ -109,14 +110,38 @@ class _WalletPageState extends State<WalletPage> {
             child: Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20.0,
-                    vertical: 10.0,
+                  // AM MODIFICAT AICI: Am schimbat din symmetric în only pentru a adăuga spațiu specific sus
+                  padding: const EdgeInsets.only(
+                    top:
+                        40.0, // <-- Aici este spațiul adăugat deasupra. Poți crește la 50.0 sau 60.0 dacă vrei mai jos.
+                    bottom: 10.0,
+                    left: 8.0,
+                    right: 8.0,
                   ),
-
+                  // Folosim un Row pentru a alinia elementele orizontal
                   child: Row(
                     children: [
-                      const SizedBox(width: 48), // păstrează titlul centrat
+                      // 1. Butonul de Back (Săgeata din stânga)
+                      IconButton(
+                        icon: const Icon(
+                          Icons.arrow_back_ios_new,
+                          color: Colors.white,
+                        ),
+                        // Navighează înapoi la pagina anterioară
+                        onPressed: () {
+                          // 1. Dacă pagina a primit o funcție de la părinte (ex: să schimbe tab-ul), o executăm.
+                          if (widget.onBackTap != null) {
+                            widget.onBackTap!();
+                          }
+                          // 2. Altfel, verificăm dacă e sigur să dăm pop (dacă am intrat aici din altă pagină prin Navigator.push)
+                          else if (Navigator.canPop(context)) {
+                            Navigator.of(context).pop();
+                          }
+                          // 3. Dacă niciuna nu e valabilă, butonul nu va face nimic, evitând astfel crash-ul / ecranul negru.
+                        },
+                      ),
+
+                      // 2. Titlul Centrat
                       Expanded(
                         child: Text(
                           'Portofel & Conturi',
@@ -130,23 +155,18 @@ class _WalletPageState extends State<WalletPage> {
                           ),
                         ),
                       ),
-                      IconButton(
-                        tooltip: 'Plăți & venituri recurente',
-                        icon: const Icon(Icons.repeat, color: Colors.white),
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  const RecurringTransactionsPage(),
-                            ),
-                          );
-                        },
-                      ),
+
+                      // 3. Spacer invizibil pentru echilibrare
+                      // Deoarece am pus un buton în stânga, trebuie să punem un spațiu gol
+                      // de aceeași dimensiune în dreapta pentru ca titlul să rămână perfect centrat.
+                      // Un IconButton standard are cam 48px lățime.
+                      const SizedBox(width: 48),
+
+                      // AM ELIMINAT: Butonul IconButton cu iconița Icons.repeat a fost șters de aici.
                     ],
                   ),
                 ),
-
+                const SizedBox(height: 25.0),
                 _buildTotalBalanceCard(settings),
                 Padding(
                   padding: const EdgeInsets.symmetric(
@@ -154,10 +174,7 @@ class _WalletPageState extends State<WalletPage> {
                     vertical: 6,
                   ),
                   child: Card(
-                    elevation: 0,
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.surface.withValues(alpha: 0.95),
+                    elevation: 2,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(15),
                     ),
@@ -195,7 +212,7 @@ class _WalletPageState extends State<WalletPage> {
                   padding: const EdgeInsets.only(
                     left: 20,
                     right: 20,
-                    top: 50,
+                    top: 20,
                     bottom: 10,
                   ),
                   child: Align(
@@ -300,7 +317,7 @@ class _WalletPageState extends State<WalletPage> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    '$symbol${balance.toStringAsFixed(2)}',
+                    '${balance.toStringAsFixed(2)} $symbol',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
@@ -341,9 +358,9 @@ class _WalletPageState extends State<WalletPage> {
 
   Widget _buildTotalBalanceCard(SettingsProvider settings) {
     return Card(
-      margin: EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
+      margin: EdgeInsets.all(16.0),
       elevation: 0,
-      color: accentGreen.withValues(alpha: 0.4),
+      color: const Color(0xff2f7e79).withValues(alpha: 0.97),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       child: Padding(
         padding: const EdgeInsets.all(24.0),
@@ -370,7 +387,7 @@ class _WalletPageState extends State<WalletPage> {
                           0.0;
                     }
                     return Text(
-                      '${settings.currencySymbol}${total.toStringAsFixed(2)}',
+                      '${total.toStringAsFixed(2)} ${settings.currencySymbol}',
                       style: TextStyle(
                         fontSize: 36,
                         fontWeight: FontWeight.bold,

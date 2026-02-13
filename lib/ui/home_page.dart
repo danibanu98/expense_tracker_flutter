@@ -310,7 +310,7 @@ class _HomePageState extends State<HomePage> {
       color: const Color(0xff2f7e79).withValues(alpha: 0.97),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       child: Padding(
-        padding: const EdgeInsets.all(20.0),
+        padding: const EdgeInsets.all(24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

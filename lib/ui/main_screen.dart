@@ -35,7 +35,7 @@ class _MainScreenState extends State<MainScreen> {
         onSeeAllPressed: () => _navigateTo(1),
       ), // <-- Trimitem funcția către HomePage (Index 1 = Statistici)
       StatisticsPage(onBackTap: () => _onItemTapped(0)),
-      WalletPage(),
+      WalletPage(onBackTap: () => _onItemTapped(0)),
       ProfilePage(),
     ];
   }
