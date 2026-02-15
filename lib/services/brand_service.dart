@@ -5,21 +5,55 @@ class BrandService {
   static const Map<String, String> _brandAssets = {
     'netflix': 'netflix.png',
     'youtube': 'youtube.png',
-    'asigurare ale': 'nn.png', // Asigură-te că ai poza nn.png
-    'rata bt': 'bt.png', // Asigură-te că ai poza bt.png
+    'asigurare': 'nn.png',
+    'kaufland': 'kaufland.png',
+    'carrefour': 'carrefour.png',
+    'spotify': 'spotify.png',
+    'uber': 'uber.png',
+    'bolt': 'bolt.png',
+    'emag': 'emag.png',
+    'rata bt': 'bt.png',
     'orange': 'orange.png',
     'digi': 'digi.png',
     'rcs': 'digi.png',
-    'curent ppc': 'enel.png', // Asigură-te că ai poza enel.png
+    'curent ppc': 'enel.png',
     'eon': 'eon.png',
     'revolut': 'revolut.png',
     'lidl': 'lidl.png',
     'starbucks': 'starbucks.png',
     'glovo': 'glovo.png',
-    'tazz': 'glovo.png', // Folosim glovo și pentru tazz dacă nu ai logo separat
+    'tazz': 'tazz.png',
     'omv': 'omv.png',
-    'petrom': 'omv.png',
+    'petrom': 'petrom.png',
+    'rompetrol': 'rompetrol.png',
+    'lukoil': 'lukoil.png',
+    'mol': 'mol.png',
+    'socar': 'socar.png',
+    'gazprom': 'gazprom.png',
+    'altex': 'altex.png',
+    'flanco': 'flanco.png',
+    'decathlon': 'decathlon.png',
+    'h&m': 'hm.png',
+    'zara': 'zara.png',
   };
+
+  // 1.1 Returnează lista tuturor numelor de branduri (pentru sugestii)
+  static List<String> get knownBrands => _brandAssets.keys.toList();
+
+  // 1.2 Returnează calea către asset pentru un nume de brand dat (pentru lista din Autocomplete)
+  static String? getAssetPathForBrand(String brandName) {
+    // Căutăm exact cheia sau dacă cheia e conținută
+    final key = _brandAssets.keys.firstWhere(
+      (k) =>
+          k == brandName.toLowerCase() || brandName.toLowerCase().contains(k),
+      orElse: () => '',
+    );
+
+    if (key.isNotEmpty) {
+      return 'assets/images/${_brandAssets[key]}';
+    }
+    return null; // Nu avem imagine
+  }
 
   // --- 2. LOGICA PENTRU BRANDURI (Logo-uri vs Iconițe) ---
   // Aceasta este funcția apelată din StatisticsPage și HomePage
@@ -93,18 +127,21 @@ class BrandService {
   static IconData getIconForCategory(String category) {
     switch (category) {
       case 'Alimente & Băuturi':
+        return Icons.local_grocery_store;
       case 'Mâncare':
         return Icons.restaurant;
       case 'Cumpărături':
         return Icons.shopping_bag;
       case 'Locuinţă':
-      case 'Facturi':
         return Icons.home;
+      case 'Facturi':
+        return Icons.receipt_long;
       case 'Transport':
         return Icons.directions_bus;
       case 'Maşină':
         return Icons.directions_car;
       case 'Viaţă & Divertisment':
+        return Icons.movie;
       case 'Distracție':
         return Icons.sports_esports;
       case 'Hardware PC':
