@@ -207,7 +207,7 @@ class _RecurringTransactionsPageState extends State<RecurringTransactionsPage> {
                     children: [
                       Switch(
                         value: active,
-                        activeColor: Theme.of(context).colorScheme.primary,
+                        activeThumbColor: Theme.of(context).colorScheme.primary,
                         onChanged: (v) async {
                           Navigator.pop(
                             ctx,

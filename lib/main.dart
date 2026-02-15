@@ -9,6 +9,7 @@ import 'firebase_options.dart';
 import 'package:expense_tracker_nou/providers/settings_provider.dart';
 import 'package:expense_tracker_nou/theme/theme.dart';
 import 'package:expense_tracker_nou/ui/auth_page.dart';
+import 'package:expense_tracker_nou/services/brand_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -36,9 +37,45 @@ class _AppLoader extends StatefulWidget {
 }
 
 class _AppLoaderState extends State<_AppLoader> {
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Apelăm funcția care bagă TOATE imaginile în cache (și branduri, și fundal)
+    _precacheAllImages();
+  }
+
+  // --- FUNCȚIA UNIFICATĂ DE CACHE ---
+  void _precacheAllImages() {
+    try {
+      // 1. Încărcăm Brandurile (din BrandService)
+      final brands = BrandService.knownBrands;
+      for (var brand in brands) {
+        final path = BrandService.getAssetPathForBrand(brand);
+        if (path != null) {
+          precacheImage(AssetImage(path), context);
+        }
+      }
+
+      // 2. Încărcăm imaginile Statice de UI (Fundalul, etc.)
+      final List<String> staticUiImages = [
+        'assets/images/fundal.png', // <--- Aici este fundalul tău verde
+        // Dacă mai ai alte imagini (ex: logo), adaugă-le aici:
+        // 'assets/images/logo.png',
+      ];
+
+      for (var imagePath in staticUiImages) {
+        precacheImage(AssetImage(imagePath), context);
+      }
+    } catch (e) {
+      debugPrint('Eroare la precache imagini: $e');
+    }
+  }
+
   Future<Widget> _load() async {
     await initializeDateFormatting('ro', null);
-    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
     final settingsProvider = SettingsProvider();
     await settingsProvider.init();
     final prefs = await SharedPreferences.getInstance();
@@ -58,9 +95,7 @@ class _AppLoaderState extends State<_AppLoader> {
           return snapshot.data!;
         }
         return const MaterialApp(
-          home: Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          ),
+          home: Scaffold(body: Center(child: CircularProgressIndicator())),
         );
       },
     );

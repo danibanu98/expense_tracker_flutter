@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:expense_tracker_nou/services/brand_service.dart';
 
 class AddTransactionSheet extends StatefulWidget {
   // Parametri opționali pentru modul EDITARE
@@ -211,13 +212,17 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
             child: Column(
               children: [
                 // --- A. ANTETUL ---
+                SizedBox(height: 40),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 10.0),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       IconButton(
-                        icon: Icon(Icons.arrow_back, color: Colors.white),
+                        icon: Icon(
+                          Icons.arrow_back_ios_new,
+                          color: Colors.white,
+                        ),
                         onPressed: () => Navigator.of(context).pop(),
                       ),
                       Expanded(
@@ -241,7 +246,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                     ],
                   ),
                 ),
-                SizedBox(height: 60),
+                SizedBox(height: 40),
 
                 // --- B. CARDUL ALB (FORMULARUL) ---
                 Expanded(
@@ -303,40 +308,154 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                           ),
                           SizedBox(height: 30),
 
-                          // 1. Categoria
-                          DropdownButtonFormField<String>(
-                            initialValue: _selectedCategory,
-                            hint: Text('Selectează Categoria'),
-                            decoration: InputDecoration(
-                              labelText: 'Categorie',
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            items:
-                                (_selectedType == 'expense'
-                                        ? _expenseCategories
-                                        : _incomeCategories)
-                                    .map(
-                                      (category) => DropdownMenuItem(
-                                        value: category,
-                                        child: Text(category),
+                          // 1. Descrierea cu Autocomplete
+                          LayoutBuilder(
+                            builder: (context, constraints) {
+                              return Autocomplete<String>(
+                                initialValue: TextEditingValue(
+                                  text: _descriptionController.text,
+                                ),
+
+                                // A. LOGICA DE FILTRARE
+                                optionsBuilder:
+                                    (TextEditingValue textEditingValue) {
+                                      if (textEditingValue.text.isEmpty) {
+                                        return const Iterable<String>.empty();
+                                      }
+                                      // Filtrăm lista din BrandService
+                                      return BrandService.knownBrands.where((
+                                        String option,
+                                      ) {
+                                        // MODIFICARE AICI:
+                                        // Transformăm ambele în litere mici pentru comparație
+                                        return option.toLowerCase().contains(
+                                          textEditingValue.text.toLowerCase(),
+                                        );
+                                      });
+                                    },
+
+                                // B. CAND SE SELECTEAZĂ O OPȚIUNE
+                                onSelected: (String selection) {
+                                  _descriptionController.text = selection;
+                                  // Opțional: Poți selecta automat și categoria dacă vrei
+                                  // if (selection == 'netflix') setState(() => _selectedCategory = 'Viață & Divertisment');
+                                },
+
+                                // C. CÂMPUL DE TEXT (DESIGN-UL TĂU VECHI)
+                                fieldViewBuilder:
+                                    (
+                                      context,
+                                      fieldTextEditingController,
+                                      fieldFocusNode,
+                                      onFieldSubmitted,
+                                    ) {
+                                      // Sincronizăm controller-ul tău principal cu cel din Autocomplete
+                                      // Astfel, dacă scrie ceva și NU selectează din listă, tot se salvează.
+                                      fieldTextEditingController.addListener(
+                                        () {
+                                          _descriptionController.text =
+                                              fieldTextEditingController.text;
+                                        },
+                                      );
+
+                                      // IMPORTANT: Dacă suntem în modul editare și e prima randare,
+                                      // ne asigurăm că textul apare în câmp.
+                                      if (_descriptionController
+                                              .text
+                                              .isNotEmpty &&
+                                          fieldTextEditingController
+                                              .text
+                                              .isEmpty) {
+                                        fieldTextEditingController.text =
+                                            _descriptionController.text;
+                                      }
+
+                                      return TextField(
+                                        controller: fieldTextEditingController,
+                                        focusNode: fieldFocusNode,
+                                        decoration: InputDecoration(
+                                          labelText: 'Descriere',
+                                          hintText: 'ex: Lidl, Netflix...',
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    },
+
+                                // D. LISTA DE SUGESTII (CUSTOM UI)
+                                optionsViewBuilder: (context, onSelected, options) {
+                                  return Align(
+                                    alignment: Alignment.topLeft,
+                                    child: Material(
+                                      elevation: 4.0,
+                                      borderRadius: BorderRadius.circular(12),
+                                      // Folosim constraints de la LayoutBuilder pentru a avea lățimea corectă
+                                      child: Container(
+                                        width: constraints.maxWidth,
+                                        color: Theme.of(context).cardColor,
+                                        constraints: const BoxConstraints(
+                                          maxHeight: 200,
+                                        ),
+                                        child: ListView.builder(
+                                          padding: EdgeInsets.zero,
+                                          shrinkWrap: true,
+                                          itemCount: options.length,
+                                          itemBuilder: (BuildContext context, int index) {
+                                            final String option = options
+                                                .elementAt(index);
+                                            final String? assetPath =
+                                                BrandService.getAssetPathForBrand(
+                                                  option,
+                                                );
+
+                                            return ListTile(
+                                              leading: assetPath != null
+                                                  ? Container(
+                                                      width: 30,
+                                                      height: 30,
+                                                      decoration: BoxDecoration(
+                                                        shape: BoxShape.circle,
+                                                        image: DecorationImage(
+                                                          image: AssetImage(
+                                                            assetPath,
+                                                          ),
+                                                          fit: BoxFit.contain,
+                                                        ),
+                                                      ),
+                                                    )
+                                                  : const Icon(
+                                                      Icons.store,
+                                                      size: 20,
+                                                    ),
+                                              title: Text(
+                                                option.toUpperCase(),
+                                              ), // Stilizează cum vrei
+                                              onTap: () {
+                                                onSelected(option);
+                                              },
+                                            );
+                                          },
+                                        ),
                                       ),
-                                    )
-                                    .toList(),
-                            onChanged: (value) =>
-                                setState(() => _selectedCategory = value),
+                                    ),
+                                  );
+                                },
+                              );
+                            },
                           ),
                           SizedBox(height: 20),
 
                           // 2. Suma
                           TextField(
                             controller: _amountController,
-                            keyboardType: TextInputType.numberWithOptions(
+                            keyboardType: const TextInputType.numberWithOptions(
                               decimal: true,
                             ),
+                            // Stilul pentru textul pe care îl scrie utilizatorul
                             style: TextStyle(
-                              fontSize: 24,
                               fontWeight: FontWeight.bold,
                               color: _selectedType == 'expense'
                                   ? const Color(0xff7b0828)
@@ -344,18 +463,28 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                             ),
                             decoration: InputDecoration(
                               labelText: 'Sumă',
-                              prefixText: settings.currencySymbol,
-                              prefixStyle: TextStyle(
+
+                              // --- AICI ESTE MODIFICAREA ---
+                              // hintStyle controlează culoarea textului "0.00 RON" când câmpul e gol
+                              hintStyle: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: _selectedType == 'expense'
+                                    ? const Color(0xff7b0828)
+                                    : const Color(0xff2f7e79),
+                              ),
+
+                              // -----------------------------
+                              prefixStyle: const TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
                               ),
-                              hintText: '0.00',
+                              hintText: '0.00 ${settings.currencySymbol}',
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
                             ),
                           ),
-                          SizedBox(height: 20),
+                          const SizedBox(height: 20),
 
                           // 3. Contul (Dezactivat la Editare)
                           if (_isLoadingAccounts)
@@ -395,15 +524,29 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                             ),
                           SizedBox(height: 20),
 
-                          // 4. Descrierea
-                          TextField(
-                            controller: _descriptionController,
+                          // 4. Categoria
+                          DropdownButtonFormField<String>(
+                            initialValue: _selectedCategory,
+                            hint: Text('Selectează Categoria'),
                             decoration: InputDecoration(
-                              labelText: 'Descriere',
+                              labelText: 'Categorie',
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
                             ),
+                            items:
+                                (_selectedType == 'expense'
+                                        ? _expenseCategories
+                                        : _incomeCategories)
+                                    .map(
+                                      (category) => DropdownMenuItem(
+                                        value: category,
+                                        child: Text(category),
+                                      ),
+                                    )
+                                    .toList(),
+                            onChanged: (value) =>
+                                setState(() => _selectedCategory = value),
                           ),
                           SizedBox(height: 20),
 
