@@ -34,23 +34,28 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
   bool _isLoadingAccounts = true;
 
   final List<String> _expenseCategories = [
-    'Alimente & Băuturi',
-    'Cumpărături',
-    'Locuinţă',
-    'Transport',
-    'Maşină',
-    'Viaţă & Divertisment',
-    'Hardware PC',
-    'Cheltuieli financiare',
-    'Investiţii',
-    'Cadou',
+    'Mâncare & Supermarket', // Lidl, Kaufland, Carrefour
+    'Restaurante & Livrări', // Glovo, Tazz, Starbucks, McDonald's
+    'Transport & Auto', // Uber, Bolt, OMV, Petrom, Rompetrol, RCA
+    'Locuință & Utilități', // Digi, Enel, E.ON, Orange, Chirie
+    'Cumpărături & Fashion', // Zara, H&M, Decathlon, Haine
+    'Electronice & Electro', // eMAG, Altex, Flanco, Hardware PC
+    'Divertisment & Abonamente', // Netflix, YouTube, Spotify, Cinema
+    'Sănătate & Farmacie', // NN Asigurări, Farmacii, Dentist
+    'Financiar & Taxe', // BT (Rata), Revolut, Comisioane
+    'Educație & Cărți', // Cursuri, Cărți
+    'Vacanțe & Călătorii', // Hoteluri, Bilete avion
+    'Cadouri & Donații', // Cadouri
     'Altele',
   ];
   final List<String> _incomeCategories = [
     'Salariu',
-    'Bonus',
-    'Cadou',
-    'Investiţii',
+    'Bonus & Prime',
+    'Freelancing', // Activități independente
+    'Investiții & Dividende', // Bursă, Dobânzi
+    'Chirii & Imobiliare', // Dacă încasezi chirie
+    'Cadouri & Restituiri', // Bani primiți sau returnați
+    'Alocații & Ajutoare', // De la stat sau familie
     'Altele',
   ];
   String? _selectedCategory;
@@ -64,21 +69,47 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
     super.initState();
     _loadAccounts();
 
-    // --- LOGICA DE INIȚIALIZARE (EDIT VS NEW) ---
     if (_isEditing) {
-      // Suntem în modul EDITARE: Pre-completăm câmpurile
+      // --- MOD DE EDITARE ---
       final data = widget.transactionData!;
+
       _descriptionController.text = data['description'] ?? '';
       _amountController.text = (data['amount'] ?? 0.0).toString();
       _selectedType = data['type'] ?? 'expense';
-      _selectedCategory = data['category'];
-      _selectedAccountId = data['accountId']; // Contul original
 
+      // Aici e problema: categoria salvată în baza de date (ex: "Locuință")
+      String savedCategory = data['category'];
+
+      // 1. Verificăm și REPARĂM lista dacă lipsește categoria veche
+      if (_selectedType == 'expense') {
+        // Dacă categoria salvată NU e în lista nouă de cheltuieli...
+        if (!_expenseCategories.contains(savedCategory)) {
+          // ...o adăugăm temporar la finalul listei!
+          setState(() {
+            _expenseCategories.add(savedCategory);
+          });
+        }
+      } else {
+        // La fel pentru venituri
+        if (!_incomeCategories.contains(savedCategory)) {
+          setState(() {
+            _incomeCategories.add(savedCategory);
+          });
+        }
+      }
+
+      // Acum putem selecta liniștiți categoria, știind sigur că există în listă
+      _selectedCategory = savedCategory;
+
+      _selectedAccountId = data['accountId'];
       Timestamp timestamp = data['timestamp'] ?? Timestamp.now();
       _selectedDate = timestamp.toDate();
     } else {
-      // Suntem în modul ADAUGARE: Valori implicite
-      _selectedCategory = _expenseCategories.first;
+      // --- MOD DE ADĂUGARE NOUĂ ---
+      // Aici nu avem riscuri, luăm pur și simplu prima din listă
+      _selectedCategory = _selectedType == 'expense'
+          ? _expenseCategories.first
+          : _incomeCategories.first;
     }
   }
 

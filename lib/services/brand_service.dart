@@ -123,14 +123,56 @@ class BrandService {
   }
 
   // ... Restul funcțiilor (getIconForCategory, _buildBrandLogo) rămân la fel ...
+  // În brand_service.dart
+
   static IconData getIconForCategory(String category) {
-    // ... (păstrează codul tău existent aici)
     switch (category) {
-      case 'Alimente & Băuturi':
-        return Icons.local_grocery_store;
-      // ... restul case-urilor tale ...
+      // --- CHELTUIELI ---
+      case 'Mâncare & Supermarket':
+        return Icons.shopping_cart;
+      case 'Restaurante & Livrări':
+        return Icons.restaurant;
+      case 'Transport & Auto':
+        return Icons.directions_car;
+      case 'Locuință & Utilități':
+        return Icons.home; // sau Icons.lightbulb
+      case 'Cumpărături & Fashion':
+        return Icons.checkroom; // Iconiță pentru haine/cuier
+      case 'Electronice & Electro':
+        return Icons.devices; // Laptop/Telefon
+      case 'Divertisment & Abonamente':
+        return Icons.movie; // sau Icons.subscriptions
+      case 'Sănătate & Farmacie':
+        return Icons.health_and_safety; // sau Icons.medical_services
+      case 'Financiar & Taxe':
+        return Icons.account_balance;
+      case 'Educație & Cărți':
+        return Icons.menu_book;
+      case 'Vacanțe & Călătorii':
+        return Icons.flight_takeoff;
+      case 'Cadouri & Donații':
+        return Icons.card_giftcard;
+
+      // --- VENITURI ---
+      case 'Salariu':
+        return Icons.work;
+      case 'Bonus & Prime':
+        return Icons.star;
+      case 'Freelancing':
+        return Icons.laptop_mac;
+      case 'Investiții & Dividende':
+        return Icons.trending_up;
+      case 'Chirii & Imobiliare':
+        return Icons.apartment;
+      case 'Cadouri & Restituiri':
+        return Icons.volunteer_activism; // Mână cu inimă
+      case 'Alocații & Ajutoare':
+        return Icons.family_restroom;
+
+      // --- DEFAULT ---
+      case 'Altele':
       default:
-        return Icons.money;
+        return Icons.category;
     }
   }
 

@@ -36,24 +36,29 @@ class _AddRecurringTransactionSheetState
   List<QueryDocumentSnapshot> _accounts = [];
   bool _isLoadingAccounts = true;
 
-  final List<String> _expenseCategories = const [
-    'Alimente & Băuturi',
-    'Cumpărături',
-    'Locuinţă',
-    'Transport',
-    'Maşină',
-    'Viaţă & Divertisment',
-    'Hardware PC',
-    'Cheltuieli financiare',
-    'Investiţii',
-    'Cadou',
+  final List<String> _expenseCategories = [
+    'Mâncare & Supermarket', // Lidl, Kaufland, Carrefour
+    'Restaurante & Livrări', // Glovo, Tazz, Starbucks, McDonald's
+    'Transport & Auto', // Uber, Bolt, OMV, Petrom, Rompetrol, RCA
+    'Locuință & Utilități', // Digi, Enel, E.ON, Orange, Chirie
+    'Cumpărături & Fashion', // Zara, H&M, Decathlon, Haine
+    'Electronice & Electro', // eMAG, Altex, Flanco, Hardware PC
+    'Divertisment & Abonamente', // Netflix, YouTube, Spotify, Cinema
+    'Sănătate & Farmacie', // NN Asigurări, Farmacii, Dentist
+    'Financiar & Taxe', // BT (Rata), Revolut, Comisioane
+    'Educație & Cărți', // Cursuri, Cărți
+    'Vacanțe & Călătorii', // Hoteluri, Bilete avion
+    'Cadouri & Donații', // Cadouri
     'Altele',
   ];
-  final List<String> _incomeCategories = const [
+  final List<String> _incomeCategories = [
     'Salariu',
-    'Bonus',
-    'Cadou',
-    'Investiţii',
+    'Bonus & Prime',
+    'Freelancing', // Activități independente
+    'Investiții & Dividende', // Bursă, Dobânzi
+    'Chirii & Imobiliare', // Dacă încasezi chirie
+    'Cadouri & Restituiri', // Bani primiți sau returnați
+    'Alocații & Ajutoare', // De la stat sau familie
     'Altele',
   ];
 
