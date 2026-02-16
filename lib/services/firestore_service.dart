@@ -115,6 +115,63 @@ class FirestoreService {
     });
   }
 
+  // --- 1.1 TRANSFER DE FONDURI (NOU) ---
+  Future<void> transferFunds({
+    required String fromAccountId,
+    required String toAccountId,
+    required double amount,
+    required String description,
+    required DateTime date,
+  }) async {
+    final String? userId = FirebaseAuth.instance.currentUser?.uid;
+    final userDoc = await users.doc(userId).get();
+    final String householdId = userDoc.get('householdId');
+
+    final DocumentReference fromAccountRef = accounts.doc(fromAccountId);
+    final DocumentReference toAccountRef = accounts.doc(toAccountId);
+    final DocumentReference transactionRef = expenses.doc();
+
+    await FirebaseFirestore.instance.runTransaction((transaction) async {
+      // 1. Citim ambele conturi
+      DocumentSnapshot fromSnapshot = await transaction.get(fromAccountRef);
+      DocumentSnapshot toSnapshot = await transaction.get(toAccountRef);
+
+      if (!fromSnapshot.exists || !toSnapshot.exists) {
+        throw Exception("Unul dintre conturi nu mai există!");
+      }
+
+      // 2. Calculăm noile balanțe
+      double fromBalance =
+          (fromSnapshot.data() as Map<String, dynamic>)['balance'] ?? 0.0;
+      double toBalance =
+          (toSnapshot.data() as Map<String, dynamic>)['balance'] ?? 0.0;
+
+      // Opțional: Poți bloca transferul dacă nu sunt fonduri suficiente
+      if (fromBalance < amount) throw Exception("Fonduri insuficiente!");
+
+      double newFromBalance = fromBalance - amount;
+      double newToBalance = toBalance + amount;
+
+      // 3. Creăm înregistrarea tranzacției (Istoric)
+      // O salvăm cu tipul 'transfer'
+      transaction.set(transactionRef, {
+        'description': description.isEmpty ? 'Transfer' : description,
+        'amount': amount,
+        'type': 'transfer', // Tip special
+        'timestamp': Timestamp.fromDate(date),
+        'uid': userId,
+        'householdId': householdId,
+        'accountId': fromAccountId, // Contul de unde au plecat banii
+        'targetAccountId': toAccountId, // Contul unde au ajuns banii
+        'category': 'Transfer', // Categorie fixă
+      });
+
+      // 4. Actualizăm balanțele
+      transaction.update(fromAccountRef, {'balance': newFromBalance});
+      transaction.update(toAccountRef, {'balance': newToBalance});
+    });
+  }
+
   // --- 2. ȘTERGERE TRANZACȚIE ---
   Future<void> deleteExpense(String docId) async {
     DocumentReference transactionRef = expenses.doc(docId);

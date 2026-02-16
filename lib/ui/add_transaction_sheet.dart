@@ -26,13 +26,19 @@ class AddTransactionSheet extends StatefulWidget {
 class _AddTransactionSheetState extends State<AddTransactionSheet> {
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _amountController = TextEditingController();
+
+  // Modificat pentru a suporta si 'transfer'
   String _selectedType = 'expense';
 
   final FirestoreService _firestoreService = FirestoreService();
+
   String? _selectedAccountId;
+  String? _targetAccountId; // --- VARIABILĂ NOUĂ PENTRU TRANSFER ---
+
   List<QueryDocumentSnapshot> _accounts = [];
   bool _isLoadingAccounts = true;
 
+  // Listele nu sunt const pentru a putea adăuga dinamic categorii vechi
   final List<String> _expenseCategories = [
     'Mâncare & Supermarket', // Lidl, Kaufland, Carrefour
     'Restaurante & Livrări', // Glovo, Tazz, Starbucks, McDonald's
@@ -58,6 +64,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
     'Alocații & Ajutoare', // De la stat sau familie
     'Altele',
   ];
+
   String? _selectedCategory;
   DateTime _selectedDate = DateTime.now();
 
@@ -77,8 +84,13 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
       _amountController.text = (data['amount'] ?? 0.0).toString();
       _selectedType = data['type'] ?? 'expense';
 
+      // Dacă este un transfer editat, încărcăm și contul destinație
+      if (data.containsKey('targetAccountId')) {
+        _targetAccountId = data['targetAccountId'];
+      }
+
       // Aici e problema: categoria salvată în baza de date (ex: "Locuință")
-      String savedCategory = data['category'];
+      String savedCategory = data['category'] ?? 'Altele';
 
       // 1. Verificăm și REPARĂM lista dacă lipsește categoria veche
       if (_selectedType == 'expense') {
@@ -89,7 +101,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
             _expenseCategories.add(savedCategory);
           });
         }
-      } else {
+      } else if (_selectedType == 'income') {
         // La fel pentru venituri
         if (!_incomeCategories.contains(savedCategory)) {
           setState(() {
@@ -116,17 +128,21 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
   Future<void> _loadAccounts() async {
     try {
       var accountsList = await _firestoreService.getAccountsList();
-      setState(() {
-        _accounts = accountsList;
-        _isLoadingAccounts = false;
-      });
+      if (mounted) {
+        setState(() {
+          _accounts = accountsList;
+          _isLoadingAccounts = false;
+        });
+      }
     } catch (e) {
       if (kDebugMode) {
         debugPrint("Eroare la încărcarea conturilor: $e");
       }
-      setState(() {
-        _isLoadingAccounts = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoadingAccounts = false;
+        });
+      }
     }
   }
 
@@ -152,17 +168,9 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
   }
 
   void _saveTransaction() async {
-    final description = _descriptionController.text.trim();
     final amountStr = _amountController.text.trim();
 
-    final descError = Validators.required(description, 'Descrierea');
-    if (descError != null) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(descError)));
-      return;
-    }
+    // Validare Sumă (Comună pentru toate)
     final amountError = Validators.amount(amountStr);
     if (amountError != null) {
       if (!mounted) return;
@@ -171,41 +179,89 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
       ).showSnackBar(SnackBar(content: Text(amountError)));
       return;
     }
-    if (_selectedAccountId == null || _selectedCategory == null) {
+    final amount = double.parse(amountStr.replaceAll(',', '.'));
+
+    // Validare Cont Sursă (Comună)
+    if (_selectedAccountId == null) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Selectează contul și categoria.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Selectează contul.')));
       return;
     }
 
-    final amount = double.parse(amountStr.replaceAll(',', '.'));
-
     try {
-      if (_isEditing) {
-        // --- APELĂM UPDATE ---
-        await _firestoreService.updateTransaction(
-          widget.transactionId!,
-          description,
-          amount,
-          _selectedType,
-          _selectedCategory!,
-          _selectedDate,
-          // Notă: Nu trimitem accountId pentru că nu schimbăm contul la editare
+      if (_selectedType == 'transfer') {
+        // --- LOGICA PENTRU TRANSFER ---
+        if (_targetAccountId == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Selectează contul destinatar.')),
+          );
+          return;
+        }
+        if (_selectedAccountId == _targetAccountId) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Conturile trebuie să fie diferite.')),
+          );
+          return;
+        }
+
+        await _firestoreService.transferFunds(
+          fromAccountId: _selectedAccountId!,
+          toAccountId: _targetAccountId!,
+          amount: amount,
+          description: _descriptionController.text
+              .trim(), // Poate fi goală la transfer
+          date: _selectedDate,
         );
-        // Întoarce un rezultat 'true' pentru a anunța pagina anterioară să se actualizeze
-        if (mounted) Navigator.of(context).pop(true);
-      } else {
-        // --- APELĂM ADD ---
-        await _firestoreService.addTransaction(
-          description,
-          amount,
-          _selectedType,
-          _selectedAccountId!,
-          _selectedCategory!,
-          _selectedDate,
-        );
+
         if (mounted) Navigator.of(context).pop();
+      } else {
+        // --- LOGICA STANDARD (Cheltuială / Venit) ---
+        // Validările specifice (Descriere, Categorie) se fac doar aici
+        final description = _descriptionController.text.trim();
+        final descError = Validators.required(description, 'Descrierea');
+        if (descError != null) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(descError)));
+          return;
+        }
+
+        if (_selectedCategory == null) {
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Selectează categoria.')),
+          );
+          return;
+        }
+
+        if (_isEditing) {
+          // --- APELĂM UPDATE ---
+          await _firestoreService.updateTransaction(
+            widget.transactionId!,
+            description,
+            amount,
+            _selectedType,
+            _selectedCategory!,
+            _selectedDate,
+            // Notă: Nu trimitem accountId pentru că nu schimbăm contul la editare
+          );
+          // Întoarce un rezultat 'true' pentru a anunța pagina anterioară să se actualizeze
+          if (mounted) Navigator.of(context).pop(true);
+        } else {
+          // --- APELĂM ADD ---
+          await _firestoreService.addTransaction(
+            description,
+            amount,
+            _selectedType,
+            _selectedAccountId!,
+            _selectedCategory!,
+            _selectedDate,
+          );
+          if (mounted) Navigator.of(context).pop();
+        }
       }
     } catch (e) {
       if (!mounted) return;
@@ -215,9 +271,17 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
     }
   }
 
+  // Helper pentru culoarea activă (inclusiv Albastru pentru Transfer)
+  Color _getActiveColor() {
+    if (_selectedType == 'expense') return const Color(0xff7b0828);
+    if (_selectedType == 'income') return const Color(0xff2f7e79);
+    return const Color(0xff1976D2); // Albastru pentru Transfer
+  }
+
   @override
   Widget build(BuildContext context) {
     final settings = Provider.of<SettingsProvider>(context, listen: false);
+    final bool isTransfer = _selectedType == 'transfer';
 
     return Scaffold(
       body: Stack(
@@ -227,7 +291,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
             clipper: _TopCurveClipper(),
             child: Container(
               height: MediaQuery.of(context).size.height * 0.45,
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 image: DecorationImage(
                   image: AssetImage(
                     'assets/images/fundal.png',
@@ -243,14 +307,14 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
             child: Column(
               children: [
                 // --- A. ANTETUL ---
-                SizedBox(height: 40),
+                const SizedBox(height: 40),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 10.0),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       IconButton(
-                        icon: Icon(
+                        icon: const Icon(
                           Icons.arrow_back_ios_new,
                           color: Colors.white,
                         ),
@@ -258,15 +322,18 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                       ),
                       Expanded(
                         child: Text(
+                          // Titlu dinamic
                           _isEditing
                               ? 'Editează Tranzacția'
                               : (_selectedType == 'expense'
                                     ? 'Adaugă Cheltuială'
-                                    : 'Adaugă Venit'),
+                                    : (_selectedType == 'income'
+                                          ? 'Adaugă Venit'
+                                          : 'Transferă Bani')),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           textAlign: TextAlign.center,
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 22,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
@@ -277,13 +344,13 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                     ],
                   ),
                 ),
-                SizedBox(height: 40),
+                const SizedBox(height: 40),
 
                 // --- B. CARDUL ALB (FORMULARUL) ---
                 Expanded(
                   child: SingleChildScrollView(
                     child: Container(
-                      margin: EdgeInsets.symmetric(horizontal: 16),
+                      margin: const EdgeInsets.symmetric(horizontal: 16),
                       padding: const EdgeInsets.all(24.0),
                       decoration: BoxDecoration(
                         color: Theme.of(context).colorScheme.surface,
@@ -292,219 +359,222 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                           BoxShadow(
                             color: Colors.black.withValues(alpha: 0.05),
                             blurRadius: 10,
-                            offset: Offset(0, 5),
+                            offset: const Offset(0, 5),
                           ),
                         ],
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          // Toggle Buttons
+                          // Toggle Buttons (Acum cu 3 opțiuni)
                           Center(
-                            child: ToggleButtons(
-                              isSelected: [
-                                _selectedType == 'expense',
-                                _selectedType == 'income',
-                              ],
-                              onPressed: (index) {
-                                setState(() {
-                                  _selectedType = index == 0
-                                      ? 'expense'
-                                      : 'income';
-                                  _selectedCategory = _selectedType == 'expense'
-                                      ? _expenseCategories.first
-                                      : _incomeCategories.first;
-                                });
-                              },
-                              borderRadius: BorderRadius.circular(12),
-                              selectedColor: Colors.white,
-                              fillColor: _selectedType == 'expense'
-                                  ? const Color(0xff7b0828)
-                                  : const Color(0xff2f7e79),
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16.0,
+                            child: SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: ToggleButtons(
+                                isSelected: [
+                                  _selectedType == 'expense',
+                                  _selectedType == 'income',
+                                  _selectedType == 'transfer', // Butonul 3
+                                ],
+                                onPressed: (index) {
+                                  setState(() {
+                                    if (index == 0) {
+                                      _selectedType = 'expense';
+                                      _selectedCategory =
+                                          _expenseCategories.first;
+                                    } else if (index == 1) {
+                                      _selectedType = 'income';
+                                      _selectedCategory =
+                                          _incomeCategories.first;
+                                    } else {
+                                      _selectedType = 'transfer';
+                                      _selectedCategory = null;
+                                    }
+                                  });
+                                },
+                                borderRadius: BorderRadius.circular(12),
+                                selectedColor: Colors.white,
+                                // Culoarea se schimbă dinamic
+                                fillColor: _getActiveColor(),
+                                children: const [
+                                  Padding(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 16.0,
+                                    ),
+                                    child: Text('Cheltuială'),
                                   ),
-                                  child: Text('Cheltuială'),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16.0,
+                                  Padding(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 16.0,
+                                    ),
+                                    child: Text('Venit'),
                                   ),
-                                  child: Text('Venit'),
-                                ),
-                              ],
+                                  Padding(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 16.0,
+                                    ),
+                                    child: Text('Transfer'),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                          SizedBox(height: 30),
+                          const SizedBox(height: 30),
 
-                          // 1. Descrierea cu Autocomplete
-                          LayoutBuilder(
-                            builder: (context, constraints) {
-                              return Autocomplete<String>(
-                                initialValue: TextEditingValue(
-                                  text: _descriptionController.text,
-                                ),
+                          // 1. Descrierea cu Autocomplete (DOAR DACĂ NU E TRANSFER)
+                          if (!isTransfer) ...[
+                            LayoutBuilder(
+                              builder: (context, constraints) {
+                                return Autocomplete<String>(
+                                  initialValue: TextEditingValue(
+                                    text: _descriptionController.text,
+                                  ),
 
-                                // A. LOGICA DE FILTRARE
-                                optionsBuilder:
-                                    (TextEditingValue textEditingValue) {
-                                      if (textEditingValue.text.isEmpty) {
-                                        return const Iterable<String>.empty();
-                                      }
-                                      // Filtrăm lista din BrandService
-                                      return BrandService.knownBrands.where((
-                                        String option,
+                                  // A. LOGICA DE FILTRARE
+                                  optionsBuilder:
+                                      (TextEditingValue textEditingValue) {
+                                        if (textEditingValue.text.isEmpty) {
+                                          return const Iterable<String>.empty();
+                                        }
+                                        // Filtrăm lista din BrandService
+                                        return BrandService.knownBrands.where((
+                                          String option,
+                                        ) {
+                                          return option.toLowerCase().contains(
+                                            textEditingValue.text.toLowerCase(),
+                                          );
+                                        });
+                                      },
+
+                                  // B. CAND SE SELECTEAZĂ O OPȚIUNE
+                                  onSelected: (String selection) {
+                                    _descriptionController.text = selection;
+                                  },
+
+                                  // C. CÂMPUL DE TEXT
+                                  fieldViewBuilder:
+                                      (
+                                        context,
+                                        fieldTextEditingController,
+                                        fieldFocusNode,
+                                        onFieldSubmitted,
                                       ) {
-                                        // MODIFICARE AICI:
-                                        // Transformăm ambele în litere mici pentru comparație
-                                        return option.toLowerCase().contains(
-                                          textEditingValue.text.toLowerCase(),
+                                        fieldTextEditingController.addListener(
+                                          () {
+                                            _descriptionController.text =
+                                                fieldTextEditingController.text;
+                                          },
                                         );
-                                      });
-                                    },
 
-                                // B. CAND SE SELECTEAZĂ O OPȚIUNE
-                                onSelected: (String selection) {
-                                  _descriptionController.text = selection;
-                                  // Opțional: Poți selecta automat și categoria dacă vrei
-                                  // if (selection == 'netflix') setState(() => _selectedCategory = 'Viață & Divertisment');
-                                },
+                                        if (_descriptionController
+                                                .text
+                                                .isNotEmpty &&
+                                            fieldTextEditingController
+                                                .text
+                                                .isEmpty) {
+                                          fieldTextEditingController.text =
+                                              _descriptionController.text;
+                                        }
 
-                                // C. CÂMPUL DE TEXT (DESIGN-UL TĂU VECHI)
-                                fieldViewBuilder:
-                                    (
-                                      context,
-                                      fieldTextEditingController,
-                                      fieldFocusNode,
-                                      onFieldSubmitted,
-                                    ) {
-                                      // Sincronizăm controller-ul tău principal cu cel din Autocomplete
-                                      // Astfel, dacă scrie ceva și NU selectează din listă, tot se salvează.
-                                      fieldTextEditingController.addListener(
-                                        () {
-                                          _descriptionController.text =
-                                              fieldTextEditingController.text;
-                                        },
-                                      );
-
-                                      // IMPORTANT: Dacă suntem în modul editare și e prima randare,
-                                      // ne asigurăm că textul apare în câmp.
-                                      if (_descriptionController
-                                              .text
-                                              .isNotEmpty &&
-                                          fieldTextEditingController
-                                              .text
-                                              .isEmpty) {
-                                        fieldTextEditingController.text =
-                                            _descriptionController.text;
-                                      }
-
-                                      return TextField(
-                                        controller: fieldTextEditingController,
-                                        focusNode: fieldFocusNode,
-                                        decoration: InputDecoration(
-                                          labelText: 'Descriere',
-                                          hintText: 'ex: Lidl, Netflix...',
-                                          border: OutlineInputBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              12,
+                                        return TextField(
+                                          controller:
+                                              fieldTextEditingController,
+                                          focusNode: fieldFocusNode,
+                                          decoration: InputDecoration(
+                                            labelText: 'Descriere',
+                                            hintText: 'ex: Lidl, Netflix...',
+                                            border: OutlineInputBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
                                             ),
                                           ),
-                                        ),
-                                      );
-                                    },
+                                        );
+                                      },
 
-                                // D. LISTA DE SUGESTII (CUSTOM UI)
-                                optionsViewBuilder: (context, onSelected, options) {
-                                  return Align(
-                                    alignment: Alignment.topLeft,
-                                    child: Material(
-                                      elevation: 4.0,
-                                      borderRadius: BorderRadius.circular(12),
-                                      // Folosim constraints de la LayoutBuilder pentru a avea lățimea corectă
-                                      child: Container(
-                                        width: constraints.maxWidth,
-                                        color: Theme.of(context).cardColor,
-                                        constraints: const BoxConstraints(
-                                          maxHeight: 200,
-                                        ),
-                                        child: ListView.builder(
-                                          padding: EdgeInsets.zero,
-                                          shrinkWrap: true,
-                                          itemCount: options.length,
-                                          itemBuilder: (BuildContext context, int index) {
-                                            final String option = options
-                                                .elementAt(index);
-                                            final String? assetPath =
-                                                BrandService.getAssetPathForBrand(
-                                                  option,
-                                                );
+                                  // D. LISTA DE SUGESTII
+                                  optionsViewBuilder: (context, onSelected, options) {
+                                    return Align(
+                                      alignment: Alignment.topLeft,
+                                      child: Material(
+                                        elevation: 4.0,
+                                        borderRadius: BorderRadius.circular(12),
+                                        child: Container(
+                                          width: constraints.maxWidth,
+                                          color: Theme.of(context).cardColor,
+                                          constraints: const BoxConstraints(
+                                            maxHeight: 200,
+                                          ),
+                                          child: ListView.builder(
+                                            padding: EdgeInsets.zero,
+                                            shrinkWrap: true,
+                                            itemCount: options.length,
+                                            itemBuilder: (BuildContext context, int index) {
+                                              final String option = options
+                                                  .elementAt(index);
+                                              final String? assetPath =
+                                                  BrandService.getAssetPathForBrand(
+                                                    option,
+                                                  );
 
-                                            return ListTile(
-                                              leading: assetPath != null
-                                                  ? Container(
-                                                      width: 30,
-                                                      height: 30,
-                                                      decoration: BoxDecoration(
-                                                        shape: BoxShape.circle,
-                                                        image: DecorationImage(
-                                                          image: AssetImage(
-                                                            assetPath,
-                                                          ),
-                                                          fit: BoxFit.contain,
+                                              return ListTile(
+                                                leading: assetPath != null
+                                                    ? Container(
+                                                        width: 30,
+                                                        height: 30,
+                                                        decoration: BoxDecoration(
+                                                          shape:
+                                                              BoxShape.circle,
+                                                          image:
+                                                              DecorationImage(
+                                                                image:
+                                                                    AssetImage(
+                                                                      assetPath,
+                                                                    ),
+                                                                fit: BoxFit
+                                                                    .contain,
+                                                              ),
                                                         ),
+                                                      )
+                                                    : const Icon(
+                                                        Icons.store,
+                                                        size: 20,
                                                       ),
-                                                    )
-                                                  : const Icon(
-                                                      Icons.store,
-                                                      size: 20,
-                                                    ),
-                                              title: Text(
-                                                option.toUpperCase(),
-                                              ), // Stilizează cum vrei
-                                              onTap: () {
-                                                onSelected(option);
-                                              },
-                                            );
-                                          },
+                                                title: Text(
+                                                  option.toUpperCase(),
+                                                ),
+                                                onTap: () {
+                                                  onSelected(option);
+                                                },
+                                              );
+                                            },
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                  );
-                                },
-                              );
-                            },
-                          ),
-                          SizedBox(height: 20),
+                                    );
+                                  },
+                                );
+                              },
+                            ),
+                            const SizedBox(height: 20),
+                          ],
 
-                          // 2. Suma
+                          // 2. Suma (VIZIBIL MEREU)
                           TextField(
                             controller: _amountController,
                             keyboardType: const TextInputType.numberWithOptions(
                               decimal: true,
                             ),
-                            // Stilul pentru textul pe care îl scrie utilizatorul
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
-                              color: _selectedType == 'expense'
-                                  ? const Color(0xff7b0828)
-                                  : const Color(0xff2f7e79),
+                              // Culoarea textului urmărește tipul selectat
+                              color: _getActiveColor(),
                             ),
                             decoration: InputDecoration(
                               labelText: 'Sumă',
-
-                              // --- AICI ESTE MODIFICAREA ---
-                              // hintStyle controlează culoarea textului "0.00 RON" când câmpul e gol
                               hintStyle: TextStyle(
                                 fontWeight: FontWeight.bold,
-                                color: _selectedType == 'expense'
-                                    ? const Color(0xff7b0828)
-                                    : const Color(0xff2f7e79),
+                                color: _getActiveColor(),
                               ),
-
-                              // -----------------------------
                               prefixStyle: const TextStyle(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
@@ -517,22 +587,28 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                           ),
                           const SizedBox(height: 20),
 
-                          // 3. Contul (Dezactivat la Editare)
+                          // 3. Contul Sursă (VIZIBIL MEREU)
                           if (_isLoadingAccounts)
-                            Center(child: CircularProgressIndicator())
+                            const Center(child: CircularProgressIndicator())
                           else
                             IgnorePointer(
-                              // <-- Blochează interacțiunea dacă e editare
                               ignoring: _isEditing,
                               child: Opacity(
-                                // <-- Îl face puțin transparent ca să arate dezactivat
                                 opacity: _isEditing ? 0.5 : 1.0,
                                 child: DropdownButtonFormField<String>(
-                                  initialValue: _selectedAccountId,
-                                  hint: Text('Selectează Contul'),
+                                  // --- FIX EROARE: Verificăm dacă contul selectat există în listă ---
+                                  value:
+                                      _accounts.any(
+                                        (doc) => doc.id == _selectedAccountId,
+                                      )
+                                      ? _selectedAccountId
+                                      : null,
+                                  // -----------------------------------------------------------
+                                  hint: const Text('Selectează Contul'),
                                   decoration: InputDecoration(
-                                    labelText:
-                                        'Cont ${_isEditing ? '(Nu poate fi schimbat)' : ''}',
+                                    labelText: isTransfer
+                                        ? 'Din Contul (Sursă)'
+                                        : 'Cont ${_isEditing ? '(Nu poate fi schimbat)' : ''}',
                                     border: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(12),
                                     ),
@@ -553,42 +629,100 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                                 ),
                               ),
                             ),
-                          SizedBox(height: 20),
 
-                          // 4. Categoria
-                          DropdownButtonFormField<String>(
-                            initialValue: _selectedCategory,
-                            hint: Text('Selectează Categoria'),
-                            decoration: InputDecoration(
-                              labelText: 'Categorie',
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
+                          // 4. Contul Destinație (DOAR LA TRANSFER)
+                          if (isTransfer) ...[
+                            const SizedBox(height: 20),
+                            const Center(
+                              child: Icon(
+                                Icons.arrow_downward,
+                                color: Colors.grey,
                               ),
                             ),
-                            items:
-                                (_selectedType == 'expense'
-                                        ? _expenseCategories
-                                        : _incomeCategories)
-                                    .map(
-                                      (category) => DropdownMenuItem(
-                                        value: category,
-                                        child: Text(category),
-                                      ),
-                                    )
-                                    .toList(),
-                            onChanged: (value) =>
-                                setState(() => _selectedCategory = value),
-                          ),
-                          SizedBox(height: 20),
+                            const SizedBox(height: 20),
 
-                          // 5. Data
+                            if (_isLoadingAccounts)
+                              const Center(child: CircularProgressIndicator())
+                            else
+                              DropdownButtonFormField<String>(
+                                value: _targetAccountId,
+                                hint: const Text('Selectează Contul'),
+                                decoration: InputDecoration(
+                                  labelText: 'Către Contul (Destinație)',
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                    borderSide: const BorderSide(
+                                      color: Colors.blue,
+                                    ),
+                                  ),
+                                ),
+                                // Filtrăm lista ca să nu alegem același cont ca sursa
+                                items: _accounts
+                                    .where(
+                                      (doc) => doc.id != _selectedAccountId,
+                                    )
+                                    .map((doc) {
+                                      var account =
+                                          doc.data() as Map<String, dynamic>;
+                                      return DropdownMenuItem(
+                                        value: doc.id,
+                                        child: Text(
+                                          account['name'] ?? 'Cont Fără Nume',
+                                        ),
+                                      );
+                                    })
+                                    .toList(),
+                                onChanged: (value) =>
+                                    setState(() => _targetAccountId = value),
+                              ),
+                          ],
+
+                          const SizedBox(height: 20),
+
+                          // 5. Categoria (DOAR DACĂ NU E TRANSFER)
+                          if (!isTransfer) ...[
+                            DropdownButtonFormField<String>(
+                              // --- FIX EROARE: Verificăm dacă categoria selectată există în listă ---
+                              value:
+                                  (_selectedType == 'expense'
+                                          ? _expenseCategories
+                                          : _incomeCategories)
+                                      .contains(_selectedCategory)
+                                  ? _selectedCategory
+                                  : null,
+                              // --------------------------------------------------------------
+                              hint: const Text('Selectează Categoria'),
+                              decoration: InputDecoration(
+                                labelText: 'Categorie',
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              items:
+                                  (_selectedType == 'expense'
+                                          ? _expenseCategories
+                                          : _incomeCategories)
+                                      .map(
+                                        (category) => DropdownMenuItem(
+                                          value: category,
+                                          child: Text(category),
+                                        ),
+                                      )
+                                      .toList(),
+                              onChanged: (value) =>
+                                  setState(() => _selectedCategory = value),
+                            ),
+                            const SizedBox(height: 20),
+                          ],
+
+                          // 6. Data (VIZIBIL MEREU - necesar pentru istoric)
                           InputDecorator(
                             decoration: InputDecoration(
                               labelText: 'Dată',
                               border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              contentPadding: EdgeInsets.symmetric(
+                              contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 12,
                                 vertical: 8,
                               ),
@@ -597,14 +731,14 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                               onPressed: () => _selectDate(context),
                               child: Row(
                                 children: [
-                                  Icon(Icons.calendar_today, size: 20),
-                                  SizedBox(width: 10),
+                                  const Icon(Icons.calendar_today, size: 20),
+                                  const SizedBox(width: 10),
                                   Text(
                                     DateFormat(
                                       'EEE, d MMM yyyy',
                                       'ro',
                                     ).format(_selectedDate),
-                                    style: TextStyle(
+                                    style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.w500,
                                     ),
@@ -613,7 +747,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                               ),
                             ),
                           ),
-                          SizedBox(height: 30),
+                          const SizedBox(height: 30),
 
                           // Butonul de Salvare
                           SizedBox(
@@ -621,13 +755,22 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                             child: ElevatedButton(
                               onPressed: _saveTransaction,
                               style: ElevatedButton.styleFrom(
-                                padding: EdgeInsets.symmetric(vertical: 16),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                ),
+                                backgroundColor:
+                                    _getActiveColor(), // Buton colorat dinamic
+                                foregroundColor: Colors.white,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                               ),
                               child: Text(
-                                _isEditing ? 'Actualizează' : 'Salvează',
+                                isTransfer
+                                    ? 'Transferă'
+                                    : (_isEditing
+                                          ? 'Actualizează'
+                                          : 'Salvează'),
                               ),
                             ),
                           ),

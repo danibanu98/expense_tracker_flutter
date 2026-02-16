@@ -264,7 +264,9 @@ class _AddRecurringTransactionSheetState
                   onPressed: (index) {
                     setState(() {
                       _selectedType = index == 0 ? 'expense' : 'income';
-                      _selectedCategory = categories.first;
+                      _selectedCategory = _selectedType == 'expense'
+                          ? _expenseCategories.first
+                          : _incomeCategories.first;
                     });
                   },
                   borderRadius: BorderRadius.circular(12),
