@@ -597,7 +597,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                                 opacity: _isEditing ? 0.5 : 1.0,
                                 child: DropdownButtonFormField<String>(
                                   // --- FIX EROARE: Verificăm dacă contul selectat există în listă ---
-                                  value:
+                                  initialValue:
                                       _accounts.any(
                                         (doc) => doc.id == _selectedAccountId,
                                       )
@@ -645,7 +645,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                               const Center(child: CircularProgressIndicator())
                             else
                               DropdownButtonFormField<String>(
-                                value: _targetAccountId,
+                                initialValue: _targetAccountId,
                                 hint: const Text('Selectează Contul'),
                                 decoration: InputDecoration(
                                   labelText: 'Către Contul (Destinație)',
@@ -683,7 +683,7 @@ class _AddTransactionSheetState extends State<AddTransactionSheet> {
                           if (!isTransfer) ...[
                             DropdownButtonFormField<String>(
                               // --- FIX EROARE: Verificăm dacă categoria selectată există în listă ---
-                              value:
+                              initialValue:
                                   (_selectedType == 'expense'
                                           ? _expenseCategories
                                           : _incomeCategories)
