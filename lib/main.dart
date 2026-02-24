@@ -4,6 +4,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
+import 'dart:async';
 
 import 'firebase_options.dart';
 import 'package:expense_tracker_nou/providers/settings_provider.dart';
@@ -11,19 +12,33 @@ import 'package:expense_tracker_nou/theme/theme.dart';
 import 'package:expense_tracker_nou/ui/auth_page.dart';
 import 'package:expense_tracker_nou/services/brand_service.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+Future<void> main() async {
+  // Folosim runZonedGuarded ca să Sentry prindă erori de la început
+  await runZonedGuarded(
+    () async {
+      // Inițializare Sentry + binding-ul corect
+      await SentryFlutter.init(
+        (options) {
+          options.dsn = const String.fromEnvironment(
+            'https://11a6da941da1bb28885a313862d4e467@o4510359931715584.ingest.de.sentry.io/4510404959928400',
+            defaultValue: '',
+          );
+          options.tracesSampleRate = 0.2;
 
-  await SentryFlutter.init(
-    (options) {
-      options.dsn = const String.fromEnvironment(
-        'SENTRY_DSN',
-        defaultValue: '',
+          // Opțional: activează tracking performanță (ajută la warning-urile de timer)
+          options.enableAutoPerformanceTracing = true;
+          options.enableDeduplication = true; // evită duplicate erori
+        },
+        appRunner: () {
+          runApp(const _AppLoader());
+        },
       );
-      options.tracesSampleRate = 0.2;
+
+      // Aici poți adăuga alte inițializări dacă ai (ex: Firebase, dar ai deja în _AppLoader)
     },
-    appRunner: () {
-      runApp(const _AppLoader());
+    (error, stackTrace) async {
+      // Dacă apare vreo eroare înainte de runApp, Sentry o capturează
+      await Sentry.captureException(error, stackTrace: stackTrace);
     },
   );
 }
