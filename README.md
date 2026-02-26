@@ -9,9 +9,9 @@ Aplicația ajută utilizatorii să își urmărească veniturile și cheltuielil
 ## 📸 Screenshots
 
 <div style="display: flex; gap: 10px;">
-  <img src="assets/images/WhatsApp Image 2026-02-11 at 22.03.09.jpeg" alt="Home Screen" width="200" />
-  <img src="assets/images/WhatsApp Image 2026-02-11 at 22.03.09 (2).jpeg" alt="Statistics" width="200" />   
-  <img src="assets/images/WhatsApp Image 2026-02-11 at 22.03.09 (1).jpeg" alt="Transaction Details" width="200" />
+  <img src="imag/WhatsApp Image 2026-02-11 at 22.03.09.jpeg/" alt="Home Screen" width="200" />
+  <img src="imag/WhatsApp Image 2026-02-11 at 22.03.09 (1).jpeg" alt="Statistics" width="200" />   
+  <img src="imag/WhatsApp Image 2026-02-11 at 22.03.09 (2).jpeg" alt="Transaction Details" width="200" />
 </div>
 
 ---
