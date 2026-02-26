@@ -158,26 +158,34 @@ class _SettingsPageState extends State<SettingsPage> {
 
   Future<void> _testSentry() async {
     try {
-      debugPrint('[DEBUG] Sentry Test: Inițiator test mesaj...');
+      debugPrint('[DEBUG] Sentry Test: Se generează o eroare de test...');
 
-      // Capturează un mesaj cu nivel informational
-      final sentryId = await Sentry.captureMessage(
-        'Test message from Expense Tracker Settings',
-        level: SentryLevel.info,
+      // 1. Forțăm o eroare manuală (Throwing an exception)
+      // Folosim StateError sau o eroare personalizată pentru a simula un crash logic
+      throw StateError('Test Error: Conexiunea cu Sentry funcționează corect!');
+    } catch (exception, stackTrace) {
+      debugPrint('[ERROR] Sentry Test prins în catch: $exception');
+
+      // 2. Trimitem eroarea manual către Sentry împreună cu StackTrace-ul ei
+      final sentryId = await Sentry.captureException(
+        exception,
+        stackTrace: stackTrace,
         withScope: (scope) {
           scope.setTag('source', 'settings_page');
-          scope.setTag('action', 'test_sentry');
+          scope.setTag('action', 'manual_test_crash');
+          scope.setContexts('Device Info', {'Is Emulated': true}); // Info extra
         },
       );
 
-      debugPrint('[DEBUG] Sentry sentryId: $sentryId');
+      debugPrint('[DEBUG] Sentry Event ID: $sentryId');
 
-      // Afișează feedback pozitiv
+      // 3. Feedback vizual pentru tine
       if (!mounted) return;
-      if (sentryId.toString().isNotEmpty) {
+
+      if (sentryId != SentryId.empty()) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('✓ Mesaj trimis cu succes!\nEvent ID: $sentryId'),
+            content: Text('✅ Eroare raportată la Sentry!\nID: $sentryId'),
             backgroundColor: Colors.green,
             duration: const Duration(seconds: 4),
           ),
@@ -186,27 +194,13 @@ class _SettingsPageState extends State<SettingsPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-              '⚠️ Sentry DSN nu este configurat.\n'
-              'Rulează: flutter run --dart-define=SENTRY_DSN=tău_dsn_url',
+              '⚠️ Eroarea NU a fost trimisă. Verifică DSN-ul în main.dart!',
             ),
             backgroundColor: Colors.orange,
             duration: Duration(seconds: 4),
           ),
         );
       }
-    } catch (e, stackTrace) {
-      debugPrint('[ERROR] Sentry Test: $e');
-      debugPrint('[ERROR] StackTrace: $stackTrace');
-
-      // Afișează eroare dacă testul eșuează
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('✗ Eroare: $e'),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 4),
-        ),
-      );
     }
   }
 }

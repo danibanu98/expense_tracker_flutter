@@ -49,6 +49,8 @@ class TransactionDetailsPage extends StatelessWidget {
     final settings = Provider.of<SettingsProvider>(context);
     final FirestoreService firestoreService = FirestoreService();
 
+    bool isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     double amount = (data['amount'] ?? 0.0).toDouble();
     String type = data['type'] ?? 'expense';
     bool isExpense = type == 'expense';
@@ -65,8 +67,18 @@ class TransactionDetailsPage extends StatelessWidget {
     final Color primaryGreen = const Color(0xff2f7e79);
     final Color expenseRed = const Color(0xffD32F2F);
     final Color statusColor = isExpense ? expenseRed : primaryGreen;
+    final Color cardColor = isDarkMode
+        ? Theme.of(context).colorScheme.surface
+        : Colors.white;
+    // Textul principal: negru pe Light, alb pe Dark
+    final Color mainTextColor = isDarkMode ? Colors.white : Colors.black;
+    // Textul secundar: gri
+    final Color secondaryTextColor = isDarkMode
+        ? Colors.white70
+        : Colors.black54;
 
     return Scaffold(
+      backgroundColor: isDarkMode ? Colors.black : Colors.white,
       // --- AM ȘTERS APPBAR-UL STANDARD DE AICI ---
       body: Stack(
         children: [
@@ -215,8 +227,8 @@ class TransactionDetailsPage extends StatelessWidget {
               Expanded(
                 child: Container(
                   width: double.infinity,
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
+                  decoration: BoxDecoration(
+                    color: cardColor,
                     borderRadius: BorderRadius.only(
                       topLeft: Radius.circular(30),
                       topRight: Radius.circular(30),
@@ -260,10 +272,10 @@ class TransactionDetailsPage extends StatelessWidget {
                         // 3. Suma Mare
                         Text(
                           '${amount.toStringAsFixed(2)} ${settings.currencySymbol}',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 32,
                             fontWeight: FontWeight.bold,
-                            color: Colors.black,
+                            color: mainTextColor,
                           ),
                         ),
 
@@ -272,19 +284,16 @@ class TransactionDetailsPage extends StatelessWidget {
                         // 4. Titlul Secțiunii
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: const [
+                          children: [
                             Text(
                               'Detalii tranzacție',
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w600,
-                                color: Colors.black87,
+                                color: mainTextColor,
                               ),
                             ),
-                            Icon(
-                              Icons.keyboard_arrow_up,
-                              color: Colors.black54,
-                            ),
+                            Icon(Icons.keyboard_arrow_up, color: Colors.white),
                           ],
                         ),
 
@@ -295,6 +304,7 @@ class TransactionDetailsPage extends StatelessWidget {
                           'Status',
                           isExpense ? 'Cheltuială' : 'Venit',
                           valueColor: statusColor,
+                          labelColor: secondaryTextColor,
                           isBold: true,
                         ),
 
@@ -302,6 +312,8 @@ class TransactionDetailsPage extends StatelessWidget {
                         _buildDetailRow(
                           'Descriere',
                           data['description'] ?? '-',
+                          labelColor: secondaryTextColor,
+                          valueColor: mainTextColor,
                           isBold: true,
                         ),
 
@@ -313,39 +325,59 @@ class TransactionDetailsPage extends StatelessWidget {
                             return _buildDetailRow(
                               'Adăugat de',
                               name,
+                              labelColor: secondaryTextColor,
+                              valueColor: mainTextColor,
                               isBold: true,
                             );
                           },
                         ),
 
                         const SizedBox(height: 10),
-                        const Divider(color: Colors.black12, thickness: 1),
+                        Divider(
+                          color: isDarkMode ? Colors.white : Colors.black,
+                          thickness: 1,
+                        ),
                         const SizedBox(height: 10),
 
-                        _buildDetailRow('Ora', formattedTime, isBold: true),
-                        _buildDetailRow('Data', formattedDate, isBold: true),
+                        _buildDetailRow(
+                          'Ora', // Parametrul label
+                          formattedTime, // Parametrul value
+                          labelColor: secondaryTextColor,
+                          valueColor: mainTextColor,
+                          isBold: true,
+                        ),
+                        _buildDetailRow(
+                          'Data',
+                          labelColor: secondaryTextColor,
+                          valueColor: mainTextColor,
+                          formattedDate,
+                          isBold: true,
+                        ),
 
                         const SizedBox(height: 10),
-                        const Divider(color: Colors.black12, thickness: 1),
+                        Divider(
+                          color: isDarkMode ? Colors.white : Colors.black,
+                          thickness: 1,
+                        ),
                         const SizedBox(height: 10),
 
                         // 6. Total
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
+                            Text(
                               'Total',
                               style: TextStyle(
                                 fontSize: 16,
-                                color: Colors.black54,
+                                color: secondaryTextColor,
                               ),
                             ),
                             Text(
                               '${amount.toStringAsFixed(2)} ${settings.currencySymbol}',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.black,
+                                color: mainTextColor,
                               ),
                             ),
                           ],
@@ -369,6 +401,7 @@ class TransactionDetailsPage extends StatelessWidget {
     String label,
     String value, {
     Color? valueColor,
+    Color? labelColor,
     bool isBold = false,
   }) {
     return Padding(
@@ -378,9 +411,9 @@ class TransactionDetailsPage extends StatelessWidget {
         children: [
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 16,
-              color: Colors.black54,
+              color: labelColor ?? Colors.black54,
               fontWeight: FontWeight.w500,
             ),
           ),

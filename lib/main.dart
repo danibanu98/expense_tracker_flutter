@@ -13,34 +13,12 @@ import 'package:expense_tracker_nou/ui/auth_page.dart';
 import 'package:expense_tracker_nou/services/brand_service.dart';
 
 Future<void> main() async {
-  // Folosim runZonedGuarded ca să Sentry prindă erori de la început
-  await runZonedGuarded(
-    () async {
-      // Inițializare Sentry + binding-ul corect
-      await SentryFlutter.init(
-        (options) {
-          options.dsn = const String.fromEnvironment(
-            'https://11a6da941da1bb28885a313862d4e467@o4510359931715584.ingest.de.sentry.io/4510404959928400',
-            defaultValue: '',
-          );
-          options.tracesSampleRate = 0.2;
-
-          // Opțional: activează tracking performanță (ajută la warning-urile de timer)
-          options.enableAutoPerformanceTracing = true;
-          options.enableDeduplication = true; // evită duplicate erori
-        },
-        appRunner: () {
-          runApp(const _AppLoader());
-        },
-      );
-
-      // Aici poți adăuga alte inițializări dacă ai (ex: Firebase, dar ai deja în _AppLoader)
-    },
-    (error, stackTrace) async {
-      // Dacă apare vreo eroare înainte de runApp, Sentry o capturează
-      await Sentry.captureException(error, stackTrace: stackTrace);
-    },
-  );
+  await SentryFlutter.init((options) {
+    options.dsn =
+        'https://11a6da941da1bb28885a313862d4e467@o4510359931715584.ingest.de.sentry.io/4510404959928400';
+    // Setează tracesSampleRate pentru a monitoriza performanța (ex: 10% din sesiuni)
+    options.tracesSampleRate = 0.1;
+  }, appRunner: () => runApp(_AppLoader()));
 }
 
 /// Încarcă datele asincrone apoi afișează aplicația (necesar deoarece [appRunner] e sincron).
