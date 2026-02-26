@@ -353,7 +353,7 @@ class _AllTransactionsPageState extends State<AllTransactionsPage> {
         ),
         // --- MODIFICARE 2: FONT MAI MARE LA SUMĂ ---
         trailing: Text(
-          '${isExpense ? '-' : '+'}${settings.currencySymbol}${amount.toStringAsFixed(2)}',
+          '${amount.toStringAsFixed(2)} ${settings.currencySymbol}',
           style: TextStyle(
             color: isExpense
                 ? const Color(0xff7b0828)
