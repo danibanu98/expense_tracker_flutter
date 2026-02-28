@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:expense_tracker_nou/services/firestore_service.dart';
 import 'package:flutter/material.dart';
@@ -5,12 +6,83 @@ import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:expense_tracker_nou/theme/theme.dart';
 import 'package:expense_tracker_nou/ui/settings_page.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
+
+  @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  bool _isUploading = false;
 
   Future<void> signOut() async {
     await FirebaseAuth.instance.signOut();
+  }
+
+  Future<void> _pickAndUploadImage() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    try {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 70,
+      );
+
+      if (pickedFile == null) return;
+
+      setState(() {
+        _isUploading = true;
+      });
+
+      final file = File(pickedFile.path);
+      final metadata = SettableMetadata(contentType: 'image/jpeg');
+      final storageRef = FirebaseStorage.instance.ref().child(
+        'profile_pictures/${user.uid}.jpg',
+      );
+
+      final uploadTask = storageRef.putFile(file, metadata);
+      final snapshot = await uploadTask.whenComplete(() => null);
+
+      if (snapshot.state != TaskState.success) {
+        throw Exception('Upload task failed with state: ${snapshot.state}');
+      }
+
+      final downloadUrl = await snapshot.ref.getDownloadURL();
+
+      await FirebaseFirestore.instance.collection('users').doc(user.uid).update(
+        {'photoUrl': downloadUrl},
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Poză de profil actualizată cu succes!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Eroare la adăugarea imaginii: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isUploading = false;
+        });
+      }
+    }
   }
 
   @override
@@ -18,132 +90,259 @@ class ProfilePage extends StatelessWidget {
     final FirestoreService firestoreService = FirestoreService();
     final user = FirebaseAuth.instance.currentUser;
 
-    return StreamBuilder<DocumentSnapshot>(
-      stream: firestoreService.users.doc(user?.uid).snapshots(),
-      builder: (context, userSnapshot) {
-        // OPTIMISTIC UI: Loading doar dacă nu sunt date
-        if (!userSnapshot.hasData) {
-          return Container(
-            color: accentGreen,
-            child: Center(
-              child: CircularProgressIndicator(color: Colors.white),
-            ),
-          );
-        }
-
-        String userName = 'Utilizator';
-        String householdId = '';
-        if (userSnapshot.data!.exists) {
-          var userData = userSnapshot.data!.data() as Map<String, dynamic>;
-          userName = userData['name'] ?? 'Utilizator';
-          householdId = userData['householdId'] ?? '';
-        }
-
-        String initial = 'U';
-        if (userName.isNotEmpty) {
-          initial = userName.substring(0, 1).toUpperCase();
-        }
-
-        return Scaffold(
-          body: Container(
-            decoration: BoxDecoration(
-              image: DecorationImage(
-                image: AssetImage('assets/images/fundal.png'),
-                fit: BoxFit.cover,
+    return Scaffold(
+      body: StreamBuilder<DocumentSnapshot>(
+        stream: firestoreService.users.doc(user?.uid).snapshots(),
+        builder: (context, userSnapshot) {
+          if (!userSnapshot.hasData) {
+            return Container(
+              color: accentGreen,
+              child: const Center(
+                child: CircularProgressIndicator(color: Colors.white),
               ),
-            ),
-            child: SafeArea(
-              child: Column(
-                children: [
-                  SizedBox(height: 30),
-                  CircleAvatar(
-                    radius: 50,
-                    backgroundColor: Colors.white.withValues(alpha: 0.2),
-                    child: Text(
-                      initial,
-                      style: TextStyle(
-                        fontSize: 40,
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  SizedBox(height: 10),
-                  Text(
-                    userName,
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  Text(
-                    user?.email ?? '',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.white.withValues(alpha: 0.7),
-                    ),
-                  ),
-                  SizedBox(height: 30),
+            );
+          }
 
-                  Expanded(
+          String userName = 'Utilizator';
+          String userHandle = '@username';
+          String householdId = '';
+          String? photoUrl;
+
+          if (userSnapshot.data!.exists) {
+            var userData = userSnapshot.data!.data() as Map<String, dynamic>;
+            userName = userData['name'] ?? 'Utilizator';
+            householdId = userData['householdId'] ?? '';
+            photoUrl = userData['photoUrl'];
+
+            if (userData['handle'] != null) {
+              userHandle = userData['handle'];
+            } else {
+              userHandle = '@${userName.toLowerCase().replaceAll(' ', '_')}';
+            }
+          }
+
+          String initial = userName.isNotEmpty
+              ? userName.substring(0, 1).toUpperCase()
+              : 'U';
+
+          return Column(
+            children: [
+              Stack(
+                clipBehavior: Clip.none,
+                alignment: Alignment.bottomCenter,
+                children: [
+                  // Background arch
+                  ClipPath(
+                    clipper: _TopCurveClipper(),
                     child: Container(
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).scaffoldBackgroundColor,
-                        borderRadius: BorderRadius.only(
-                          topLeft: Radius.circular(30),
-                          topRight: Radius.circular(30),
+                      height: 200,
+                      width: double.infinity,
+                      decoration: const BoxDecoration(
+                        image: DecorationImage(
+                          image: AssetImage('assets/images/fundal.png'),
+                          fit: BoxFit.cover,
                         ),
                       ),
-                      child: ListView(
-                        padding: EdgeInsets.all(20),
-                        children: [
-                          _buildInviteCard(
-                            context,
-                            firestoreService,
-                            householdId,
+                      child: SafeArea(
+                        bottom: false,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16.0,
+                            vertical: 8.0,
                           ),
-                          SizedBox(height: 20),
-
-                          _buildProfileOption(
-                            icon: Icons.person,
-                            title: 'Profil Personal',
-                            onTap: () {},
-                          ),
-                          _buildProfileOption(
-                            icon: Icons.account_balance,
-                            title: 'Informații Cont',
-                            onTap: () {},
-                          ),
-                          _buildProfileOption(
-                            icon: Icons.settings,
-                            title: 'Setări',
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => SettingsPage(),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.arrow_back_ios_new,
+                                  color: Colors.white,
                                 ),
-                              );
-                            },
+                                onPressed: () {
+                                  if (Navigator.canPop(context)) {
+                                    Navigator.pop(context);
+                                  }
+                                },
+                              ),
+                              const Padding(
+                                padding: EdgeInsets.only(top: 8.0),
+                                child: Text(
+                                  'Profile',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 48), // Spacer
+                            ],
                           ),
-                          Divider(color: Colors.grey[800], height: 30),
-                          _buildProfileOption(
-                            icon: Icons.logout,
-                            title: 'Deconectare',
-                            iconColor: const Color(0xff7b0828),
-                            onTap: signOut,
-                          ),
-                        ],
+                        ),
                       ),
+                    ),
+                  ),
+
+                  // Avatar intersecting the curve exactly
+                  Positioned(
+                    bottom: -10, // Moves avatar down by half its radius
+                    child: Stack(
+                      alignment: Alignment.bottomRight,
+                      children: [
+                        CircleAvatar(
+                          radius: 54,
+                          backgroundColor: Theme.of(
+                            context,
+                          ).scaffoldBackgroundColor,
+                          child: CircleAvatar(
+                            radius: 50,
+                            backgroundColor: const Color(0xff2f7e79),
+                            backgroundImage: photoUrl != null
+                                ? NetworkImage(photoUrl)
+                                : null,
+                            child: photoUrl == null
+                                ? Text(
+                                    initial,
+                                    style: const TextStyle(
+                                      fontSize: 40,
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  )
+                                : null,
+                          ),
+                        ),
+                        if (_isUploading)
+                          const Positioned(
+                            right: 0,
+                            bottom: 0,
+                            child: CircleAvatar(
+                              radius: 16,
+                              backgroundColor: Colors.white,
+                              child: SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                            ),
+                          )
+                        else
+                          Positioned(
+                            right: 0,
+                            bottom: 0,
+                            child: GestureDetector(
+                              onTap: _pickAndUploadImage,
+                              child: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xff2f7e79),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.white,
+                                    width: 2,
+                                  ),
+                                ),
+                                child: const Icon(
+                                  Icons.edit,
+                                  color: Colors.white,
+                                  size: 16,
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                 ],
               ),
-            ),
-          ),
-        );
-      },
+              const SizedBox(height: 20), // Spacer below avatar
+              Text(
+                userName,
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color:
+                      Theme.of(context).textTheme.bodyLarge?.color ??
+                      Colors.black87,
+                ),
+              ),
+              Text(
+                userHandle,
+                style: const TextStyle(
+                  fontSize: 16,
+                  color: Color(0xff2f7e79),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 30),
+
+              // Profile Options List
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).scaffoldBackgroundColor,
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(30),
+                      topRight: Radius.circular(30),
+                    ),
+                  ),
+                  child: ListView(
+                    padding: EdgeInsets.zero,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                        child: _buildInviteCard(
+                          context,
+                          firestoreService,
+                          householdId,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      _buildProfileOption(
+                        icon: Icons.person,
+                        title: 'Profil Personal',
+                        onTap: () {},
+                      ),
+                      _buildProfileOption(
+                        icon: Icons.account_balance,
+                        title: 'Informații Cont',
+                        onTap: () {},
+                      ),
+                      _buildProfileOption(
+                        icon: Icons.settings,
+                        title: 'Setări',
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const SettingsPage(),
+                            ),
+                          );
+                        },
+                      ),
+                      Divider(
+                        color: Colors.grey[800],
+                        height: 30,
+                        indent: 20,
+                        endIndent: 20,
+                      ),
+                      _buildProfileOption(
+                        icon: Icons.logout,
+                        title: 'Deconectare',
+                        iconColor: const Color(0xff7b0828),
+                        onTap: signOut,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 
@@ -152,12 +351,11 @@ class ProfilePage extends StatelessWidget {
     FirestoreService firestoreService,
     String householdId,
   ) {
-    if (householdId.isEmpty) return SizedBox.shrink();
+    if (householdId.isEmpty) return const SizedBox.shrink();
 
     return StreamBuilder<DocumentSnapshot>(
       stream: firestoreService.households.doc(householdId).snapshots(),
       builder: (context, householdSnapshot) {
-        // OPTIMISTIC UI: Afișăm dacă avem date
         if (householdSnapshot.hasData) {
           String inviteCode = '...';
           String householdName = 'Gospodărie';
@@ -169,11 +367,13 @@ class ProfilePage extends StatelessWidget {
           }
 
           return Container(
-            padding: EdgeInsets.all(16),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(15),
-              boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 5)],
+              boxShadow: const [
+                BoxShadow(color: Colors.black12, blurRadius: 5),
+              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -182,17 +382,17 @@ class ProfilePage extends StatelessWidget {
                   'Bine ai venit în $householdName',
                   style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                 ),
-                SizedBox(height: 10),
-                Text(
+                const SizedBox(height: 10),
+                const Text(
                   'CODUL TĂU DE INVITAȚIE:',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
-                SizedBox(height: 10),
+                const SizedBox(height: 10),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Container(
-                      padding: EdgeInsets.symmetric(
+                      padding: const EdgeInsets.symmetric(
                         horizontal: 16,
                         vertical: 8,
                       ),
@@ -202,7 +402,7 @@ class ProfilePage extends StatelessWidget {
                       ),
                       child: Text(
                         inviteCode,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
                           letterSpacing: 2,
@@ -217,7 +417,7 @@ class ProfilePage extends StatelessWidget {
                       onPressed: () {
                         Clipboard.setData(ClipboardData(text: inviteCode));
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Codul a fost copiat!')),
+                          const SnackBar(content: Text('Codul a fost copiat!')),
                         );
                       },
                     ),
@@ -227,7 +427,7 @@ class ProfilePage extends StatelessWidget {
             ),
           );
         }
-        return Center(child: CircularProgressIndicator());
+        return const Center(child: CircularProgressIndicator());
       },
     );
   }
@@ -240,9 +440,29 @@ class ProfilePage extends StatelessWidget {
   }) {
     return ListTile(
       leading: Icon(icon, color: iconColor),
-      title: Text(title, style: TextStyle(fontSize: 16)),
+      title: Text(title, style: const TextStyle(fontSize: 16)),
       trailing: Icon(Icons.chevron_right, color: Colors.grey[600]),
       onTap: onTap,
     );
   }
+}
+
+class _TopCurveClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    Path path = Path();
+    path.lineTo(0, size.height - 80);
+    path.quadraticBezierTo(
+      size.width / 2,
+      size.height,
+      size.width,
+      size.height - 80,
+    );
+    path.lineTo(size.width, 0);
+    path.close();
+    return path;
+  }
+
+  @override
+  bool shouldReclip(CustomClipper<Path> oldClipper) => false;
 }
