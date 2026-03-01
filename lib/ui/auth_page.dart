@@ -1,4 +1,5 @@
-import 'package:expense_tracker_nou/ui/main_screen.dart'; // Asigură-te că importul e corect
+import 'package:expense_tracker_nou/services/biometric_service.dart';
+import 'package:expense_tracker_nou/ui/main_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:expense_tracker_nou/ui/login_page.dart';
@@ -23,8 +24,8 @@ class AuthPage extends StatelessWidget {
           // 3. Utilizatorul ESTE logat?
           // (Firebase ne-a trimis un obiect 'User')
           if (snapshot.hasData) {
-            // Trimite-l la ecranul principal CU MENIU
-            return MainScreen(lastTabIndex: lastTabIndex);
+            // Utilizator logat: verificăm dacă trebuie să ceară autentificare biometrică.
+            return _BiometricGate(lastTabIndex: lastTabIndex);
           }
           // 4. Utilizatorul NU este logat?
           // (Firebase ne-a trimis 'null')
@@ -37,3 +38,81 @@ class AuthPage extends StatelessWidget {
     );
   }
 }
+
+class _BiometricGate extends StatefulWidget {
+  final int lastTabIndex;
+  const _BiometricGate({required this.lastTabIndex});
+
+  @override
+  State<_BiometricGate> createState() => _BiometricGateState();
+}
+
+class _BiometricGateState extends State<_BiometricGate> {
+  final _biometricService = BiometricService();
+  bool _loading = true;
+  bool _allowed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkBiometrics();
+  }
+
+  Future<void> _checkBiometrics() async {
+    final enabled = await _biometricService.getBiometricsEnabled();
+    final supported = await _biometricService.isDeviceSupported();
+
+    bool allowed = true;
+    if (enabled && supported) {
+      allowed = await _biometricService.authenticate(
+        context: context,
+        showErrors: true,
+      );
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _allowed = allowed;
+      _loading = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (!_allowed) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Autentificarea biometrică a eșuat.',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _checkBiometrics,
+                child: const Text('Încearcă din nou'),
+              ),
+              const SizedBox(height: 8),
+              TextButton(
+                onPressed: () async {
+                  await FirebaseAuth.instance.signOut();
+                },
+                child: const Text('Deconectează-te'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return MainScreen(lastTabIndex: widget.lastTabIndex);
+  }
+}
+

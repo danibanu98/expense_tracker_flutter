@@ -1,13 +1,15 @@
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:expense_tracker_nou/services/biometric_service.dart';
 import 'package:expense_tracker_nou/services/firestore_service.dart';
+import 'package:expense_tracker_nou/theme/theme.dart';
+import 'package:expense_tracker_nou/ui/personal_profile_page.dart';
+import 'package:expense_tracker_nou/ui/settings_page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:expense_tracker_nou/theme/theme.dart';
-import 'package:expense_tracker_nou/ui/settings_page.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -18,9 +20,52 @@ class ProfilePage extends StatefulWidget {
 
 class _ProfilePageState extends State<ProfilePage> {
   bool _isUploading = false;
+  bool _supportsBiometrics = false;
+  bool _biometricsEnabled = false;
+  final _biometricService = BiometricService();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBiometricsState();
+  }
 
   Future<void> signOut() async {
     await FirebaseAuth.instance.signOut();
+  }
+
+  Future<void> _loadBiometricsState() async {
+    try {
+      final supported = await _biometricService.isDeviceSupported();
+      final enabled =
+          supported && await _biometricService.getBiometricsEnabled();
+      if (!mounted) return;
+      setState(() {
+        _supportsBiometrics = supported;
+        _biometricsEnabled = enabled;
+      });
+    } catch (e) {
+      debugPrint('Error loading biometrics state: $e');
+    }
+  }
+
+  Future<void> _onBiometricsChanged(bool value) async {
+    if (value) {
+      final success = await _biometricService.enableBiometricsWithCheck(
+        context,
+      );
+      if (!mounted) return;
+      setState(() {
+        _biometricsEnabled = success;
+      });
+      return;
+    } else {
+      await _biometricService.setBiometricsEnabled(false);
+      if (!mounted) return;
+      setState(() {
+        _biometricsEnabled = false;
+      });
+    }
   }
 
   Future<void> _pickAndUploadImage() async {
@@ -139,7 +184,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   ClipPath(
                     clipper: _TopCurveClipper(),
                     child: Container(
-                      height: 200,
+                      height: 210,
                       width: double.infinity,
                       decoration: const BoxDecoration(
                         image: DecorationImage(
@@ -152,7 +197,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         child: Padding(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 16.0,
-                            vertical: 8.0,
+                            vertical: 30.0,
                           ),
                           child: Row(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -172,10 +217,10 @@ class _ProfilePageState extends State<ProfilePage> {
                               const Padding(
                                 padding: EdgeInsets.only(top: 8.0),
                                 child: Text(
-                                  'Profile',
+                                  'Profil',
                                   style: TextStyle(
                                     color: Colors.white,
-                                    fontSize: 20,
+                                    fontSize: 22,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -309,7 +354,14 @@ class _ProfilePageState extends State<ProfilePage> {
                       _buildProfileOption(
                         icon: Icons.person,
                         title: 'Profil Personal',
-                        onTap: () {},
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const PersonalProfilePage(),
+                            ),
+                          );
+                        },
                       ),
                       _buildProfileOption(
                         icon: Icons.account_balance,
@@ -328,6 +380,19 @@ class _ProfilePageState extends State<ProfilePage> {
                           );
                         },
                       ),
+                      if (_supportsBiometrics)
+                        SwitchListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                          ),
+                          secondary: const Icon(Icons.fingerprint),
+                          title: const Text('Autentificare biometrică'),
+                          subtitle: const Text(
+                            'Cere amprentă când deschizi aplicația',
+                          ),
+                          value: _biometricsEnabled,
+                          onChanged: _onBiometricsChanged,
+                        ),
                       Divider(
                         color: Colors.grey[800],
                         height: 30,

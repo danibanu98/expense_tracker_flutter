@@ -1,7 +1,8 @@
 import 'package:expense_tracker_nou/services/firestore_service.dart';
 import 'package:expense_tracker_nou/utils/validators.dart';
-import 'package:flutter/material.dart';
+import 'package:expense_tracker_nou/widgets/password_strength_meter.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -21,6 +22,8 @@ class _RegisterPageState extends State<RegisterPage> {
   final TextEditingController _inviteCodeController = TextEditingController();
   bool _isPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
+  String _passwordValue = '';
+  String _confirmPasswordValue = '';
 
   Future<void> signUp() async {
     final name = _nameController.text.trim();
@@ -41,7 +44,7 @@ class _RegisterPageState extends State<RegisterPage> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
       return;
     }
-    error = Validators.password(password);
+    error = Validators.strongPassword(password);
     if (error != null) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
@@ -167,6 +170,11 @@ class _RegisterPageState extends State<RegisterPage> {
                 // --- Câmpul pentru Parolă ---
                 TextField(
                   controller: _passwordController,
+                  onChanged: (value) {
+                    setState(() {
+                      _passwordValue = value;
+                    });
+                  },
                   style: TextStyle(
                     color: Theme.of(context).textTheme.bodyLarge?.color,
                   ),
@@ -196,11 +204,19 @@ class _RegisterPageState extends State<RegisterPage> {
                     // --- SFÂRȘIT ---
                   ),
                 ),
+                const SizedBox(height: 12),
+                if (_passwordValue.isNotEmpty)
+                  PasswordStrengthMeter(password: _passwordValue),
                 SizedBox(height: 20),
                 // --- Câmpul pentru Confirmare Parolă ---
                 TextField(
                   controller: _confirmPasswordController,
                   obscureText: !_isConfirmPasswordVisible,
+                  onChanged: (value) {
+                    setState(() {
+                      _confirmPasswordValue = value;
+                    });
+                  },
                   style: TextStyle(
                     color: Theme.of(context).textTheme.bodyLarge?.color,
                   ), // <-- Folosește variabila 2
@@ -230,6 +246,37 @@ class _RegisterPageState extends State<RegisterPage> {
                     // --- SFÂRȘIT ---
                   ),
                 ),
+                const SizedBox(height: 8),
+                if (_confirmPasswordValue.isNotEmpty)
+                  Row(
+                    children: [
+                      Icon(
+                        _passwordValue.isNotEmpty &&
+                                _passwordValue == _confirmPasswordValue
+                            ? Icons.check_circle
+                            : Icons.cancel,
+                        size: 18,
+                        color: _passwordValue.isNotEmpty &&
+                                _passwordValue == _confirmPasswordValue
+                            ? Colors.green
+                            : Colors.red,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        _passwordValue.isNotEmpty &&
+                                _passwordValue == _confirmPasswordValue
+                            ? 'Parolele se potrivesc'
+                            : 'Parolele nu se potrivesc',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: _passwordValue.isNotEmpty &&
+                                  _passwordValue == _confirmPasswordValue
+                              ? Colors.green
+                              : Colors.red,
+                        ),
+                      ),
+                    ],
+                  ),
                 SizedBox(height: 20),
                 TextField(
                   controller: _inviteCodeController,

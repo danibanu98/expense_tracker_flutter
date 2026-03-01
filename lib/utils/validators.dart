@@ -19,12 +19,38 @@ class Validators {
   }
 
   /// Validează parola (minim 6 caractere). Returnează mesaj sau null.
+  /// Folosită în special la login (nu forțăm o parolă „foarte puternică”).
   static String? password(String? value) {
     if (value == null || value.isEmpty) {
       return 'Parola este obligatorie.';
     }
     if (value.length < 6) {
       return 'Parola trebuie să aibă cel puțin 6 caractere.';
+    }
+    return null;
+  }
+
+  /// Validează o parolă „puternică” pentru înregistrare / schimbare parolă.
+  /// Reguli: minim 8 caractere, cel puțin o literă mică, una mare, o cifră
+  /// și un caracter special.
+  static String? strongPassword(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Parola este obligatorie.';
+    }
+    if (value.length < 8) {
+      return 'Parola trebuie să aibă cel puțin 8 caractere.';
+    }
+    if (!RegExp(r'[a-z]').hasMatch(value)) {
+      return 'Parola trebuie să conțină cel puțin o literă mică.';
+    }
+    if (!RegExp(r'[A-Z]').hasMatch(value)) {
+      return 'Parola trebuie să conțină cel puțin o literă mare.';
+    }
+    if (!RegExp(r'[0-9]').hasMatch(value)) {
+      return 'Parola trebuie să conțină cel puțin o cifră.';
+    }
+    if (!RegExp(r'[!@#\$%^&*(),.?":{}|<>]').hasMatch(value)) {
+      return 'Adaugă un caracter special (ex: ! @ # &).';
     }
     return null;
   }
