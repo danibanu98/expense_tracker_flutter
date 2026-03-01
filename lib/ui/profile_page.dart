@@ -67,15 +67,25 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
         );
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       if (mounted) {
+        final String message;
+        if (e.toString().contains('object-not-found') ||
+            e.toString().contains('firebase_storage/object-not-found')) {
+          message =
+              'Storage neactivat. Activează Firebase Storage din Consola Firebase (Storage → Upgrade project) sau verifică regulile de securitate.';
+        } else {
+          message = 'Eroare la adăugarea imaginii: $e';
+        }
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Eroare la adăugarea imaginii: $e'),
+            content: Text(message),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
           ),
         );
       }
+      debugPrint('Profile image upload error: $e\n$stackTrace');
     } finally {
       if (mounted) {
         setState(() {
@@ -104,7 +114,7 @@ class _ProfilePageState extends State<ProfilePage> {
           }
 
           String userName = 'Utilizator';
-          String userHandle = '@username';
+          String userEmail = FirebaseAuth.instance.currentUser?.email ?? '';
           String householdId = '';
           String? photoUrl;
 
@@ -113,12 +123,6 @@ class _ProfilePageState extends State<ProfilePage> {
             userName = userData['name'] ?? 'Utilizator';
             householdId = userData['householdId'] ?? '';
             photoUrl = userData['photoUrl'];
-
-            if (userData['handle'] != null) {
-              userHandle = userData['handle'];
-            } else {
-              userHandle = '@${userName.toLowerCase().replaceAll(' ', '_')}';
-            }
           }
 
           String initial = userName.isNotEmpty
@@ -269,14 +273,15 @@ class _ProfilePageState extends State<ProfilePage> {
                       Colors.black87,
                 ),
               ),
-              Text(
-                userHandle,
-                style: const TextStyle(
-                  fontSize: 16,
-                  color: Color(0xff2f7e79),
-                  fontWeight: FontWeight.w600,
+              if (userEmail.isNotEmpty)
+                Text(
+                  userEmail,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: Color(0xff2f7e79),
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ),
               const SizedBox(height: 30),
 
               // Profile Options List
